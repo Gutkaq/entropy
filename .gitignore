@@ -1,0 +1,34 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Build artifacts
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Zig
+zig-cache/
+zig-out/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Other
+.env
+*.log
