@@ -1,54 +1,81 @@
-Entropy 🎲
+🌀 entropy_hpc - Gaussian Integers Go BRRRR
 
-Making complex numbers go brrrr (sometimes)
-What's This?
+    Because real numbers are for cowards and scalar code is a war crime
 
-entropy_hpc - Gaussian integers with AVX2 SIMD
+Blazingly fast™ Gaussian integers (ℤ[i]) with SIMD acceleration. We made imaginary math 20% faster. Your move, physicists.
+What Even Is This?
 
-We made multiplication 2x faster. Compiler auto-vectorized everything else and made us look silly.
-🚀 Build & Run
+Complex numbers but both parts are integers. So instead of boring 5, you get C O O L numbers like 5 + 3i. Euclidean division? GCD? Extended GCD? We got it all baby.
+Quick Start
 
-cd entropy_hpc
-cargo test
-RUSTFLAGS='-C target-cpu=native' cargo test --release -- --ignored --nocapture
-📊 Benchmark Results
+rust
+use entropy_hpc::ZInt;
 
-Tested on 16,777,216 random Gaussian integers:
+let a = ZInt::new(3, 4);  // 3 + 4i
+let b = ZInt::new(5, 12); // 5 + 12i
+let product = a * b;      // -33 + 56i (wait what)
 
-Complex Multiply: 37.9ms → 19.0ms = 2.00x speedup 🚀 (WE'RE HIM)
+// Division with remainder but make it ✨complex✨
+let (q, r) = a.div_rem(b).unwrap();
 
-Addition: 23.6ms → 22.5ms = 1.05x (compiler already did this)
+// GCD because mathematicians have too much free time
+let gcd = ZInt::gcd(a, b);
 
-Associates: 66.2ms → 59.0ms = 1.12x (decent)
+// SIMD MODE: Process 4 at once
+let results = simd_engine::mul_batch(&[a,b,a,b], &[b,a,b,a]);
 
-Norm²: 19.7ms → 20.4ms = 0.96x (we don't talk about this)
-✨ Features
+Features That Slap
 
-    ✅ Complete Gaussian integer arithmetic (ℤ[i])
+    ✅ Euclidean Division - Yes, you can divide imaginary numbers
 
-    ✅ Euclidean division & GCD
+    ✅ GCD & Extended GCD - Find GCDs and Bézout coefficients because we're extra
 
-    ✅ AVX2 SIMD batch operations (4-way parallel)
+    ✅ AVX2 SIMD - 1.2x faster than scalar (20% speed boost!)
 
-    ✅ 2x speedup on complex multiplication
+    ✅ Actually Correct - 27 tests, 1000+ random cases, 0 failures
 
-    ✅ 40 unit tests (all passing)
+    ✅ Runtime CPU Detection - Falls back to scalar if your CPU is from 2010
 
-    ✅ Automatic fallback for non-AVX2 CPUs
+Performance
 
-🎓 What We Learned
+text
+Scalar:  410 µs 😴
+SIMD:    341 µs 🚀  
+Speedup: 1.20x 💪
 
-Manual SIMD beats compiler on complex operations. For simple loops, LLVM already optimizes better than we can.
+Math Stuff (For Nerds)
 
-Lesson: Profile first. The compiler might already be doing it.
-🛠️ Requirements
+Gaussian integers are a Euclidean domain with norm N(a+bi) = a²+b². They have units {1, -1, i, -i} and support:
 
-    Rust 2021+
+    Euclidean algorithm (the OG from 300 BC)
 
-    x86_64 CPU with AVX2 (recommended)
+    Bézout's identity: gcd(a,b) = sa + tb (up to units because nothing is simple)
 
-📄 License
+    Unique factorization (mostly)
 
-MIT
+Testing
 
-"We spent 3 weeks optimizing and the compiler was already doing it. Except multiplication. Multiplication is ours."
+bash
+cargo test --release -- --nocapture
+
+Watch 27 tests pass and feel superior.
+Roadmap
+
+    Make it work
+
+    Make it fast
+
+    Make it correct
+
+    Make it FASTER (always)
+
+    ARM NEON support
+
+    World domination
+
+Warning
+
+May cause sudden urges to explain complex number theory at parties.
+License
+
+MIT or Apache-2.0. We're not your dad.
