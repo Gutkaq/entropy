@@ -1,89 +1,54 @@
-Entropy
+Entropy 🎲
 
-Making math go fast (sometimes)
-Projects
-entropy_hpc
+Making complex numbers go brrrr (sometimes)
+What's This?
 
-Gaussian integers with SIMD. Got a 2x speedup on multiplication. Compiler auto-vectorized everything else and made us look silly.
-Quick Start
+entropy_hpc - Gaussian integers with AVX2 SIMD
+
+We made multiplication 2x faster. Compiler auto-vectorized everything else and made us look silly.
+🚀 Build & Run
 
 cd entropy_hpc
-cargo test # Run tests
-RUSTFLAGS='-C target-cpu=native' cargo test --release -- --ignored --nocapture # Benchmark
-Benchmark Results (16M elements)
-Operation	Speedup	Verdict
-Multiply	2.00x	🎉 We won
-Add/Sub	~1.0x	Compiler already did it
-Norm²	0.96x	Oops
-
-TL;DR: SIMD works for complex ops. For simple stuff, the compiler is already smarter than us.
-Requirements
-
-    Rust
-
-    x86_64 CPU with AVX2 (or don't, fallbacks exist)
-
-PROJECT README.md:
-entropy_hpc
-
-High-performance Gaussian integers (ℤ[i]) with AVX2 SIMD
-What Is This
-
-Complex numbers but integers only (a + bi). We made multiplication 2x faster with SIMD. The compiler auto-vectorized everything else.
-Installation
-
-git clone https://github.com/Gutkaq/entropy.git
-cd entropy/entropy_hpc
 cargo test
-Benchmarks
+RUSTFLAGS='-C target-cpu=native' cargo test --release -- --ignored --nocapture
+📊 Benchmark Results
 
-cargo test --release -- --ignored --nocapture
+Tested on 16,777,216 random Gaussian integers:
 
-Results on 16M random elements:
+Complex Multiply: 37.9ms → 19.0ms = 2.00x speedup 🚀 (WE'RE HIM)
 
-┌──────────────┬───────────┬───────────┬─────────┐
-│ Operation │ Scalar(ms)│ SIMD(ms) │ Speedup │
-├──────────────┼───────────┼───────────┼─────────┤
-│ MUL │ 37.89 │ 18.97 │ 2.00x │ ← actual win
-│ ADD │ 23.58 │ 22.51 │ 1.05x │ ← compiler did this
-│ SUB │ 18.92 │ 19.03 │ 0.99x │ ← we tried
-│ NORM² │ 19.70 │ 20.45 │ 0.96x │ ← L
-└──────────────┴───────────┴───────────┴─────────┘
-Usage
+Addition: 23.6ms → 22.5ms = 1.05x (compiler already did this)
 
-use entropy_hpc_lib::ZInt;
+Associates: 66.2ms → 59.0ms = 1.12x (decent)
 
-let z1 = ZInt::new(3, 4);
-let z2 = ZInt::new(1, 2);
+Norm²: 19.7ms → 20.4ms = 0.96x (we don't talk about this)
+✨ Features
 
-// Basic ops
-let sum = z1 + z2;
-let product = z1 * z2; // 2x faster with SIMD
-
-// Number theory
-let norm = z1.norm_squared();
-let (quotient, remainder) = z1.div_rem(z2)?;
-let gcd = ZInt::gcd(z1, z2);
-Features
-
-    ✅ Complete Gaussian integer arithmetic
+    ✅ Complete Gaussian integer arithmetic (ℤ[i])
 
     ✅ Euclidean division & GCD
 
-    ✅ AVX2 batch operations (4-way parallel)
+    ✅ AVX2 SIMD batch operations (4-way parallel)
 
     ✅ 2x speedup on complex multiplication
 
-    ✅ 40 unit tests
+    ✅ 40 unit tests (all passing)
 
-    ✅ Automatic scalar fallback
+    ✅ Automatic fallback for non-AVX2 CPUs
 
-What We Learned
+🎓 What We Learned
 
 Manual SIMD beats compiler on complex operations. For simple loops, LLVM already optimizes better than we can.
 
-Moral: Measure before optimizing. The compiler might already be doing it.
-License
+Lesson: Profile first. The compiler might already be doing it.
+🛠️ Requirements
+
+    Rust 2021+
+
+    x86_64 CPU with AVX2 (recommended)
+
+📄 License
 
 MIT
 
+"We spent 3 weeks optimizing and the compiler was already doing it. Except multiplication. Multiplication is ours."
