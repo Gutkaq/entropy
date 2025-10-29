@@ -32,3 +32,7 @@ __pycache__/
 # Other
 .env
 *.log
+# Rust build artifacts
+target/
+Cargo.lock
+**/*.rs.bk
