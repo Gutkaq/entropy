@@ -1,81 +1,169 @@
-🌀 entropy_hpc - Gaussian Integers Go BRRRR
+## entropy_hpc
+we made a library for lattices nobody asked for
 
-    Because real numbers are for cowards and scalar code is a war crime
+Gaussian integers. Quaternions. Octonions. SIMD acceleration. In Rust. Because reasons.
 
-Blazingly fast™ Gaussian integers (ℤ[i]) with SIMD acceleration. We made imaginary math 20% faster. Your move, physicists.
-What Even Is This?
+This is what happens when mathematicians and systems programmers have too much free time.
+what is this, honestly
 
-Complex numbers but both parts are integers. So instead of boring 5, you get C O O L numbers like 5 + 3i. Euclidean division? GCD? Extended GCD? We got it all baby.
-Quick Start
+A Rust library that implements three increasingly unhinged normed division algebras:
+
+    ZInt - Complex numbers but the real and imaginary parts are integers. Yes, this exists. No, you probably don't need it.
+
+    HInt - Quaternions with half-integers sprinkled in for extra chaos. Multiplication doesn't commute. It's a feature.
+
+    OInt - 8D hypercomplex integers using the Fano plane multiplication rules. Associativity is a luxury we can't afford. Moufang property? Sure, that's fine. But associativity? No.
+
+All with AVX2 SIMD because we decided raw throughput was more important than your sanity.
+performance metrics (that don't matter)
+
+ZInt add 10k elements: 591ns
+HInt add 10k elements: 1.4µs
+OInt add 10k elements: 20ns
+
+Your network latency is measured in milliseconds. These numbers mean nothing. They are theater. But they are fast theater.
+features (because we had to list something)
+ZInt (Gaussian Integers ℤ[i])
+
+    Euclidean division with remainder
+
+    GCD & Extended GCD (Bézout's identity)
+
+    Exact division when applicable
+
+    Conjugate operations
+
+    Fractional arithmetic
+
+    Normalization and unit tracking
+
+    SIMD batch operations (4 at a time)
+
+HInt (Hurwitz Quaternions)
+
+    Non-commutative multiplication (ab ≠ ba, welcome to hell)
+
+    Euclidean division over 4D space
+
+    GCD computation
+
+    Half-integers (literally 0.5 + 0.5i + 0.5j + 0.5k is valid)
+
+    Conjugate, norm, inverse operations
+
+    Fractional representation
+
+    SIMD (2 quaternions at a time)
+
+OInt (Integer Octonions Z[O])
+
+    8D algebra with Fano plane multiplication
+
+    NON-ASSOCIATIVE (this is not a bug, it's a feature)
+
+    Moufang law verification (associativity is dead but we have something better)
+
+    Euclidean division (somehow works)
+
+    GCD over octonions (yes, really)
+
+    Fractional arithmetic in 8D
+
+    Full AVX2 SIMD support (all 8 dimensions at once)
+
+SIMD Engine
+
+    AVX2-accelerated operations with scalar fallback
+
+    Batch processing for arrays
+
+    Zero abstraction overhead
+
+why though
+
+Nobody knows. Octonions are the largest normed division algebra over the reals. After these, the mathematical structure breaks. We built a library for the most broken, unassociative, weird number system available because we could.
+
+Use cases: Academic curiosity. Grief. A cry for help.
+installation
+
+text
+[dependencies]
+entropy_hpc = "0.1.0"
+
+bash
+git clone https://github.com/Gutkaq/entropy.git
+cd entropy_hpc
+cargo test --release -- --nocapture
+
+Watch the tests pass. All of them. This is the only success you will experience with this library.
+usage
+Gaussian Integers
 
 rust
 use entropy_hpc::ZInt;
 
-let a = ZInt::new(3, 4);  // 3 + 4i
-let b = ZInt::new(5, 12); // 5 + 12i
-let product = a * b;      // -33 + 56i (wait what)
+let z = ZInt::new(3, 4);
+let norm = z.norm_squared();
+let inv = z.inv_fraction().unwrap();
+let (q, r) = z.div_rem(ZInt::new(2, 1)).unwrap();
 
-// Division with remainder but make it ✨complex✨
-let (q, r) = a.div_rem(b).unwrap();
+Quaternions
 
-// GCD because mathematicians have too much free time
-let gcd = ZInt::gcd(a, b);
+rust
+use entropy_hpc::HInt;
 
-// SIMD MODE: Process 4 at once
-let results = simd_engine::mul_batch(&[a,b,a,b], &[b,a,b,a]);
+let q = HInt::new(1, 2, 3, 4);
+let i = HInt::i();
+let j = HInt::j();
 
-Features That Slap
+assert_eq!(i * j, HInt::k());
+assert_eq!(j * i, -HInt::k());
 
-    ✅ Euclidean Division - Yes, you can divide imaginary numbers
+let gcd = HInt::gcd(q, HInt::new(2, 0, 0, 0));
 
-    ✅ GCD & Extended GCD - Find GCDs and Bézout coefficients because we're extra
+Octonions
 
-    ✅ AVX2 SIMD - 1.2x faster than scalar (20% speed boost!)
+rust
+use entropy_hpc::OInt;
 
-    ✅ Actually Correct - 27 tests, 1000+ random cases, 0 failures
+let o = OInt::new(1, 2, 3, 4, 5, 6, 7, 8);
+let e1 = OInt::e1();
+let e2 = OInt::e2();
 
-    ✅ Runtime CPU Detection - Falls back to scalar if your CPU is from 2010
+let non_commutative = e1 * e2 != e2 * e1;
+let non_associative = (e1 * e2) * e1 != e1 * (e2 * e1);
 
-Performance
+let (q, r) = o.div_rem(OInt::new(2, 0, 0, 0, 0, 0, 0, 0)).unwrap();
 
-text
-Scalar:  410 µs 😴
-SIMD:    341 µs 🚀  
-Speedup: 1.20x 💪
+the math (for the three people who care)
 
-Math Stuff (For Nerds)
+Gaussian Integers: ℤ[i] = {a + bi | a,b ∈ ℤ}
+Norm: N(a+bi) = a² + b²
 
-Gaussian integers are a Euclidean domain with norm N(a+bi) = a²+b². They have units {1, -1, i, -i} and support:
+Hurwitz Quaternions: Half-integer or all-integer components, i²=j²=k²=ijk=-1
+Non-commutative but still Euclidean.
 
-    Euclidean algorithm (the OG from 300 BC)
-
-    Bézout's identity: gcd(a,b) = sa + tb (up to units because nothing is simple)
-
-    Unique factorization (mostly)
-
-Testing
+Integer Octonions: 8D lattice with Fano plane multiplication
+Non-associative. Moufang property holds. Euclidean division exists anyway.
+testing
 
 bash
-cargo test --release -- --nocapture
+cargo test --release
+cargo test --release test_complete_api_showcase -- --nocapture
 
-Watch 27 tests pass and feel superior.
-Roadmap
+All tests pass. All your problems are now mathematical, not engineering.
+contributing
 
-    Make it work
+Found a bug? It's a feature.
+Want to add something? Why would you do this to yourself?
+Issues and PRs welcome anyway.
+license
 
-    Make it fast
+MIT - do whatever you want with this cursed knowledge
+credits
 
-    Make it correct
+Built by people who asked "can we?" instead of "should we?"
 
-    Make it FASTER (always)
+The answer was yes.
 
-    ARM NEON support
-
-    World domination
-
-Warning
-
-May cause sudden urges to explain complex number theory at parties.
-License
-
-MIT or Apache-2.0. We're not your dad.
+Now go compute something. In 8D. With SIMD. God help us all.
