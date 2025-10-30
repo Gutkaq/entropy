@@ -151,8 +151,9 @@ Non-associative. Moufang property holds. Euclidean division exists anyway.
 testing
 
 bash
-cargo test --release
-cargo test --release test_complete_api_showcase -- --nocapture
+
+    cargo test --release
+    cargo test --release test_complete_api_showcase -- --nocapture
 
 All tests pass. All your problems are now mathematical, not engineering.
 contributing
