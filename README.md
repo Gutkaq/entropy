@@ -100,40 +100,43 @@ usage
 Gaussian Integers
 
 rust
-use entropy_hpc::ZInt;
 
-let z = ZInt::new(3, 4);
-let norm = z.norm_squared();
-let inv = z.inv_fraction().unwrap();
-let (q, r) = z.div_rem(ZInt::new(2, 1)).unwrap();
+    use entropy_hpc::ZInt;
+
+    let z = ZInt::new(3, 4);
+    let norm = z.norm_squared();
+    let inv = z.inv_fraction().unwrap();
+    let (q, r) = z.div_rem(ZInt::new(2, 1)).unwrap();
 
 Quaternions
 
 rust
-use entropy_hpc::HInt;
 
-let q = HInt::new(1, 2, 3, 4);
-let i = HInt::i();
-let j = HInt::j();
+    use entropy_hpc::HInt;
 
-assert_eq!(i * j, HInt::k());
-assert_eq!(j * i, -HInt::k());
+    let q = HInt::new(1, 2, 3, 4);
+    let i = HInt::i();
+    let j = HInt::j();
 
-let gcd = HInt::gcd(q, HInt::new(2, 0, 0, 0));
+    assert_eq!(i * j, HInt::k());
+    assert_eq!(j * i, -HInt::k());
+
+    let gcd = HInt::gcd(q, HInt::new(2, 0, 0, 0));
 
 Octonions
 
 rust
-use entropy_hpc::OInt;
 
-let o = OInt::new(1, 2, 3, 4, 5, 6, 7, 8);
-let e1 = OInt::e1();
-let e2 = OInt::e2();
+    use entropy_hpc::OInt;
 
-let non_commutative = e1 * e2 != e2 * e1;
-let non_associative = (e1 * e2) * e1 != e1 * (e2 * e1);
+    let o = OInt::new(1, 2, 3, 4, 5, 6, 7, 8);
+    let e1 = OInt::e1();
+    let e2 = OInt::e2();
 
-let (q, r) = o.div_rem(OInt::new(2, 0, 0, 0, 0, 0, 0, 0)).unwrap();
+    let non_commutative = e1 * e2 != e2 * e1;
+    let non_associative = (e1 * e2) * e1 != e1 * (e2 * e1);
+
+    let (q, r) = o.div_rem(OInt::new(2, 0, 0, 0, 0, 0, 0, 0)).unwrap();
 
 the math (for the three people who care)
 
