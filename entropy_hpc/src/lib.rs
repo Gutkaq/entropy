@@ -9,10 +9,12 @@ pub type U64 = u64;
 pub mod simd;
 pub mod zint;
 pub mod hint;
+pub mod oint;
 
 // Export public types
 pub use zint::{ZInt, ZIFraction, ZIntError};
 pub use hint::{HInt, HIFraction, HIntError};
+pub use oint::{OInt, OIFraction, OIntError};
 pub use simd::simd_engine;
 
 #[cfg(test)]
@@ -27,14 +29,18 @@ mod comprehensive_demo {
         println!("\n╔══════════════════════════════════════════════════════════════╗");
         println!("║  ENTROPY HPC: COMPREHENSIVE API DEMONSTRATION                ║");
         println!("║  Gaussian & Hurwitz Integers with SIMD Acceleration          ║");
+        println!("║  + INTEGER OCTONIONS (OInt) - The Ultimate Lattice!          ║");
+        println!("║  + AVX2 SIMD for Everything (even 8D octonions!)             ║");
         println!("╚══════════════════════════════════════════════════════════════╝\n");
 
         demo_zint_all();
         demo_hint_all();
+        demo_oint_all();
         demo_simd_all();
         
         println!("\n╔══════════════════════════════════════════════════════════════╗");
         println!("║  ALL APIS DEMONSTRATED SUCCESSFULLY! ✅                       ║");
+        println!("║  ZInt + HInt + OInt + SIMD = ENTROPY HPC COMPLETE! 🚀        ║");
         println!("╚══════════════════════════════════════════════════════════════╝");
     }
 
@@ -208,6 +214,119 @@ mod comprehensive_demo {
         println!();
     }
 
+    fn demo_oint_all() {
+        println!("═══════════════════════════════════════════════════════");
+        println!("  OINT: INTEGER OCTONIONS - ALL FUNCTIONS");
+        println!("═══════════════════════════════════════════════════════\n");
+        
+        println!("1. CONSTRUCTORS:");
+        let o1 = OInt::new(1, 2, 3, 4, 5, 6, 7, 8);
+        let zero = OInt::zero();
+        let one = OInt::one();
+        let e1 = OInt::e1();
+        let e2 = OInt::e2();
+        let e4 = OInt::e4();
+        println!("  new(1,2,3,4,5,6,7,8) = {}", o1);
+        println!("  zero() = {}", zero);
+        println!("  one() = {}", one);
+        println!("  e1() = {}", e1);
+        println!("  e2() = {}", e2);
+        println!("  e4() = {}", e4);
+        
+        let h = OInt::from_halves(1, 1, 1, 1, 1, 1, 1, 1).unwrap();
+        println!("  from_halves(1,1,1,1,1,1,1,1) = {}", h);
+        
+        println!("\n2. PROPERTIES:");
+        println!("  {}.is_zero() = {}", zero, zero.is_zero());
+        println!("  {}.is_unit() = {}", e1, e1.is_unit());
+        println!("  {}.norm_squared() = {}", o1, o1.norm_squared());
+        
+        println!("\n3. OCTONION ALGEBRA:");
+        println!("  e1*e1 = {}", e1 * e1);
+        println!("  e2*e2 = {}", e2 * e2);
+        println!("  e1*e2 = {}", e1 * e2);
+        println!("  e2*e1 = {}", e2 * e1);
+        println!("  NON-COMMUTATIVE? {}", OInt::is_non_commutative_pair(e1, e2));
+        
+        println!("\n4. NON-ASSOCIATIVITY:");
+        let a = OInt::e1();
+        let b = OInt::e2();
+        let c = OInt::e4();
+        let lhs = (a * b) * c;
+        let rhs = a * (b * c);
+        println!("  (e1*e2)*e4 = {}", lhs);
+        println!("  e1*(e2*e4) = {}", rhs);
+        println!("  Equal? {} (NON-ASSOCIATIVE!)", lhs == rhs);
+        println!("  NON-ASSOCIATIVE? {}", OInt::is_non_associative_triple(a, b, c));
+        
+        println!("\n5. MOUFANG PROPERTY:");
+        let moufang = OInt::moufang_identity(a, b, c);
+        println!("  Moufang: (a*b)*(c*a) = a*(b*c)*a");
+        println!("  Holds? {}", moufang);
+        
+        println!("\n6. ALTERNATIVE PROPERTY:");
+        let alt = OInt::alternative_identity(a, b);
+        println!("  Alternative: (a*a)*b = a*(a*b) AND (a*b)*b = a*(b*b)");
+        println!("  Holds? {}", alt);
+        
+        println!("\n7. ARITHMETIC:");
+        let x = OInt::new(3, 1, 2, 0, 0, 0, 0, 0);
+        let y = OInt::new(2, 0, 1, 0, 0, 0, 0, 0);
+        println!("  {} + {} = {}", x, y, x + y);
+        println!("  {} - {} = {}", x, y, x - y);
+        println!("  {} * {} = {}", x, y, x * y);
+        println!("  -{} = {}", x, -x);
+        
+        println!("\n8. CONJUGATE & NORM:");
+        println!("  conj({}) = {}", x, x.conj());
+        println!("  N(x) = {}", x.norm_squared());
+        println!("  x * conj(x) = {}", x * x.conj());
+        println!("  N(x*y) = {}, N(x)*N(y) = {}", 
+                 (x*y).norm_squared(), x.norm_squared() * y.norm_squared());
+        
+        println!("\n9. EUCLIDEAN DIVISION:");
+        let num = OInt::new(10, 4, 2, 0, 0, 0, 0, 0);
+        let den = OInt::new(2, 0, 0, 0, 0, 0, 0, 0);
+        let (q, r) = num.div_rem(den).unwrap();
+        println!("  {} ÷ {} → q: {}, r: {}", num, den, q, r);
+        println!("  Verify: q*d + r = {}", q * den + r);
+        println!("  N(r) = {}, N(d) = {}", r.norm_squared(), den.norm_squared());
+        
+        println!("\n10. EXACT DIVISION:");
+        let x = OInt::new(4, 2, 0, 0, 0, 0, 0, 0);
+        let y = OInt::new(2, 0, 0, 0, 0, 0, 0, 0);
+        match x.div_exact(y) {
+            Ok(res) => println!("  {} / {} = {}", x, y, res),
+            Err(_) => println!("  Not exactly divisible"),
+        }
+        
+        println!("\n11. FRACTIONS:");
+        let frac = x.div_to_fraction(y).unwrap();
+        println!("  {}/{} = {}", x, y, frac);
+        let reduced = OInt::reduce_fraction(frac);
+        println!("  Reduced: {}", reduced);
+        
+        println!("\n12. INVERSE FRACTION:");
+        let inv_frac = x.inv_fraction().unwrap();
+        println!("  1/{} = {}", x, inv_frac);
+        
+        println!("\n13. INVERSE UNIT:");
+        let e1_inv = e1.inv_unit().unwrap();
+        println!("  e1^(-1) = {}", e1_inv);
+        
+        println!("\n14. GCD:");
+        let p = OInt::new(12, 0, 0, 0, 0, 0, 0, 0);
+        let q = OInt::new(18, 0, 0, 0, 0, 0, 0, 0);
+        let g = OInt::gcd(p, q);
+        println!("  gcd({}, {}) = {}", p, q, g);
+        
+        println!("\n15. FLOAT COMPONENTS:");
+        let (fa, fb, fc, fd, fe, ff, fg, fh) = o1.to_float_components();
+        println!("  {}: ({}, {}, {}, {}, {}, {}, {}, {})", o1, fa, fb, fc, fd, fe, ff, fg, fh);
+        
+        println!();
+    }
+
     fn demo_simd_all() {
         println!("═══════════════════════════════════════════════════════");
         println!("  SIMD: BATCH OPERATIONS - ALL FUNCTIONS");
@@ -251,7 +370,26 @@ mod comprehensive_demo {
         let h_mul = simd_engine::hint_mul_batch(&ha, &hb);
         println!("  mul_batch: {:?}", h_mul);
         
-        println!("\n3. ARRAY OPERATIONS:");
+        println!("\n3. OINT SIMD (8D with AVX2!):");
+        let oa = [OInt::new(1, 2, 3, 4, 5, 6, 7, 8)];
+        let ob = [OInt::new(2, 1, 0, 0, 1, 1, 1, 1)];
+        
+        let o_add = simd_engine::oint_add_batch(&oa, &ob);
+        println!("  add_batch: {:?}", o_add);
+        
+        let o_sub = simd_engine::oint_sub_batch(&oa, &ob);
+        println!("  sub_batch: {:?}", o_sub);
+        
+        let o_neg = simd_engine::oint_neg_batch(&oa);
+        println!("  neg_batch: {:?}", o_neg);
+        
+        let o_conj = simd_engine::oint_conj_batch(&oa);
+        println!("  conj_batch: {:?}", o_conj);
+        
+        let o_mul = simd_engine::oint_mul_batch(&oa, &ob);
+        println!("  mul_batch: {:?}", o_mul);
+        
+        println!("\n4. ARRAY OPERATIONS:");
         let size = 10000;
         let mut rng = StdRng::seed_from_u64(42);
         
@@ -302,6 +440,37 @@ mod comprehensive_demo {
         let start = Instant::now();
         simd_engine::hint_mul_arrays(&vec_ha, &vec_hb, &mut h_result);
         println!("  hint_mul_arrays({}) in {:?}", size, start.elapsed());
+        
+        let vec_oa: Vec<OInt> = (0..size)
+            .map(|_| OInt::new(
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10)
+            ))
+            .collect();
+        let vec_ob: Vec<OInt> = (0..size)
+            .map(|_| OInt::new(
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10),
+                rng.gen_range(-10..10), rng.gen_range(-10..10)
+            ))
+            .collect();
+        
+        let mut o_result = vec![OInt::zero(); size];
+        
+        let start = Instant::now();
+        simd_engine::oint_add_arrays(&vec_oa, &vec_ob, &mut o_result);
+        println!("  oint_add_arrays({}) in {:?}", size, start.elapsed());
+        
+        let start = Instant::now();
+        simd_engine::oint_sub_arrays(&vec_oa, &vec_ob, &mut o_result);
+        println!("  oint_sub_arrays({}) in {:?}", size, start.elapsed());
+        
+        let start = Instant::now();
+        simd_engine::oint_mul_arrays(&vec_oa, &vec_ob, &mut o_result);
+        println!("  oint_mul_arrays({}) in {:?}", size, start.elapsed());
         
         println!();
     }
