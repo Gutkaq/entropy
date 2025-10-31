@@ -1,13 +1,17 @@
 [package]
 name = "entropy_hpc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-
-[lib]
-name = "entropy_hpc_lib"
-path = "src/lib.rs"
+authors = ["entropy contributors"]
+description = "SIMD-accelerated Euclidean lattice algebra: Complex Integers (ℤ[i]), Hurwitz Quaternions, and Integer Octonions with AVX2 support"
+license = "MIT"
+repository = "https://github.com/Gutkaq/entropy_hpc"
+keywords = ["lattice", "algebra", "simd", "quaternion", "octonion"]
+categories = ["algorithms", "math", "no-std"]
 
 [dependencies]
+
+[dev-dependencies]
 rand = "0.8"
 
 [profile.release]
@@ -15,9 +19,14 @@ opt-level = 3
 lto = true
 codegen-units = 1
 
-[profile.dev]
-opt-level = 0
-
 [profile.test]
-opt-level = 0
+opt-level = 3
+
+[lib]
+name = "entropy_hpc"
+path = "src/lib.rs"
+
+[[test]]
+name = "demo"
+path = "tests/demo.rs"
 

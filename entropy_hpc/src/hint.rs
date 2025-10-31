@@ -7,18 +7,19 @@ pub enum HIntError {
     DivisionByZero,
     NotDivisible,
     NoInverse,
+    InvalidHalfInteger,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct HIFraction {
     pub num: HInt,
     pub den: U64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
 pub struct HInt {
-    pub a: I32,
+    pub a: I32,  // Stored as 2*actual_value (even for integers, odd for half-integers)
     pub b: I32,
     pub c: I32,
     pub d: I32,
@@ -37,8 +38,31 @@ mod num_utils {
 }
 
 impl HInt {
+    // Create from integers (e.g., new(1,2,3,4) = 1 + 2i + 3j + 4k)
     pub fn new(a: I32, b: I32, c: I32, d: I32) -> Self {
-        HInt { a, b, c, d }
+        HInt {
+            a: a * 2,
+            b: b * 2,
+            c: c * 2,
+            d: d * 2,
+        }
+    }
+
+    // Create from half-integers: all components must have same parity
+    // e.g., from_halves(1,1,1,1) = 0.5 + 0.5i + 0.5j + 0.5k (all odd = half-integers)
+    // from_halves(2,2,2,2) = 1 + 1i + 1j + 1k (all even = integers)
+    pub fn from_halves(a: I32, b: I32, c: I32, d: I32) -> Result<Self, HIntError> {
+        let a_odd = a % 2 != 0;
+        let b_odd = b % 2 != 0;
+        let c_odd = c % 2 != 0;
+        let d_odd = d % 2 != 0;
+
+        // All must be odd (half-integers) or all even (integers) - no mixing
+        if a_odd != b_odd || a_odd != c_odd || a_odd != d_odd {
+            return Err(HIntError::InvalidHalfInteger);
+        }
+
+        Ok(HInt { a, b, c, d })
     }
 
     pub fn zero() -> Self {
@@ -61,10 +85,6 @@ impl HInt {
         HInt::new(0, 0, 0, 1)
     }
 
-    pub fn from_halves(a: I32, b: I32, c: I32, d: I32) -> Result<Self, HIntError> {
-        Ok(HInt::new(a, b, c, d))
-    }
-
     pub fn is_zero(self) -> bool {
         self.a == 0 && self.b == 0 && self.c == 0 && self.d == 0
     }
@@ -83,11 +103,12 @@ impl HInt {
     }
 
     pub fn norm_squared(self) -> U64 {
+        // N(q) = (a^2 + b^2 + c^2 + d^2) / 4 since stored as 2*value
         let a2: I64 = self.a as I64 * self.a as I64;
         let b2: I64 = self.b as I64 * self.b as I64;
         let c2: I64 = self.c as I64 * self.c as I64;
         let d2: I64 = self.d as I64 * self.d as I64;
-        (a2 + b2 + c2 + d2) as U64
+        ((a2 + b2 + c2 + d2) / 4) as U64
     }
 
     pub fn div_rem(self, d: HInt) -> Result<(HInt, HInt), HIntError> {
@@ -98,13 +119,23 @@ impl HInt {
         let d_norm = d.norm_squared() as I64;
         let d_conj = d.conj();
 
+        // Compute self * conj(d) (result is already stored * 2)
         let num_prod = self * d_conj;
-        let q_a = num_prod.a / (d_norm as I32);
-        let q_b = num_prod.b / (d_norm as I32);
-        let q_c = num_prod.c / (d_norm as I32);
-        let q_d = num_prod.d / (d_norm as I32);
 
-        let q = HInt::new(q_a, q_b, q_c, q_d);
+        // Divide by norm and round (need to divide by 2 more for storage)
+        let q_a_f = (num_prod.a as f64) / (d_norm as f64 * 2.0);
+        let q_b_f = (num_prod.b as f64) / (d_norm as f64 * 2.0);
+        let q_c_f = (num_prod.c as f64) / (d_norm as f64 * 2.0);
+        let q_d_f = (num_prod.d as f64) / (d_norm as f64 * 2.0);
+
+        // Round and store as *2
+        let q = HInt {
+            a: (q_a_f.round() * 2.0) as I32,
+            b: (q_b_f.round() * 2.0) as I32,
+            c: (q_c_f.round() * 2.0) as I32,
+            d: (q_d_f.round() * 2.0) as I32,
+        };
+
         let r = self - (q * d);
 
         Ok((q, r))
@@ -130,7 +161,20 @@ impl HInt {
     }
 
     pub fn reduce_fraction(frac: HIFraction) -> HIFraction {
-        let g = num_utils::integer_gcd(frac.num.norm_squared(), frac.den);
+        let a_abs = frac.num.a.abs() as U64;
+        let b_abs = frac.num.b.abs() as U64;
+        let c_abs = frac.num.c.abs() as U64;
+        let d_abs = frac.num.d.abs() as U64;
+        
+        let g1 = num_utils::integer_gcd(a_abs, b_abs);
+        let g2 = num_utils::integer_gcd(c_abs, d_abs);
+        let g3 = num_utils::integer_gcd(g1, g2);
+        let g = num_utils::integer_gcd(g3, frac.den);
+        
+        if g <= 1 {
+            return frac;
+        }
+
         HIFraction {
             num: frac.num,
             den: frac.den / g,
@@ -164,56 +208,53 @@ impl HInt {
     }
 
     pub fn normalize(self) -> HInt {
-        let units = [
-            HInt::new(1, 0, 0, 0),
-            HInt::new(-1, 0, 0, 0),
-            HInt::new(0, 1, 0, 0),
-            HInt::new(0, -1, 0, 0),
-            HInt::new(0, 0, 1, 0),
-            HInt::new(0, 0, -1, 0),
-            HInt::new(0, 0, 0, 1),
-            HInt::new(0, 0, 0, -1),
-        ];
-
-        let mut best = self;
-        let mut best_norm = self.norm_squared();
-
-        for u in &units {
-            let prod = self * (*u);
-            let norm = prod.norm_squared();
-            if norm < best_norm {
-                best = prod;
-                best_norm = norm;
-            }
+        // Normalize by multiplying by unit if needed
+        // For quaternions: prefer positive real part
+        if self.is_zero() {
+            return self;
         }
-        best
+        
+        if self.a > 0 {
+            return self;
+        }
+        
+        // Try multiplying by -1
+        let neg = -self;
+        if neg.a > 0 {
+            return neg;
+        }
+        
+        self
     }
 
     pub fn associates(self) -> [HInt; 8] {
-        let units = [
-            HInt::new(1, 0, 0, 0),
-            HInt::new(-1, 0, 0, 0),
-            HInt::new(0, 1, 0, 0),
-            HInt::new(0, -1, 0, 0),
-            HInt::new(0, 0, 1, 0),
-            HInt::new(0, 0, -1, 0),
-            HInt::new(0, 0, 0, 1),
-            HInt::new(0, 0, 0, -1),
-        ];
+        let one = HInt::one();
+        let neg_one = -one;
+        let i = HInt::i();
+        let neg_i = -i;
+        let j = HInt::j();
+        let neg_j = -j;
+        let k = HInt::k();
+        let neg_k = -k;
 
-        let mut result = [HInt::zero(); 8];
-        for (i, u) in units.iter().enumerate() {
-            result[i] = self * (*u);
-        }
-        result
+        [
+            self * one,
+            self * neg_one,
+            self * i,
+            self * neg_i,
+            self * j,
+            self * neg_j,
+            self * k,
+            self * neg_k,
+        ]
     }
 
     pub fn to_float_components(self) -> (f64, f64, f64, f64) {
         (
-            self.a as f64,
-            self.b as f64,
-            self.c as f64,
-            self.d as f64,
+            self.a as f64 / 2.0,
+            self.b as f64 / 2.0,
+            self.c as f64 / 2.0,
+            self.d as f64 / 2.0,
         )
     }
 
@@ -226,43 +267,38 @@ impl HInt {
     }
 }
 
-impl std::fmt::Display for HInt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} + {}i + {}j + {}k",
-            self.a, self.b, self.c, self.d
-        )
-    }
-}
-
 impl Add for HInt {
     type Output = HInt;
     fn add(self, other: HInt) -> HInt {
-        HInt::new(
-            self.a + other.a,
-            self.b + other.b,
-            self.c + other.c,
-            self.d + other.d,
-        )
+        HInt {
+            a: self.a + other.a,
+            b: self.b + other.b,
+            c: self.c + other.c,
+            d: self.d + other.d,
+        }
     }
 }
 
 impl Sub for HInt {
     type Output = HInt;
     fn sub(self, other: HInt) -> HInt {
-        HInt::new(
-            self.a - other.a,
-            self.b - other.b,
-            self.c - other.c,
-            self.d - other.d,
-        )
+        HInt {
+            a: self.a - other.a,
+            b: self.b - other.b,
+            c: self.c - other.c,
+            d: self.d - other.d,
+        }
     }
 }
 
 impl Mul for HInt {
     type Output = HInt;
     fn mul(self, other: HInt) -> HInt {
+        // Quaternion multiplication: (a+bi+cj+dk)(e+fi+gj+hk)
+        // i²=j²=k²=ijk=-1, ij=k, jk=i, ki=j, ji=-k, kj=-i, ik=-j
+        
+        // Working with 2*values, result needs /4 total (but we keep *2 storage)
+        // So multiply and divide by 2 once
         let a = self.a as I64 * other.a as I64
             - self.b as I64 * other.b as I64
             - self.c as I64 * other.c as I64
@@ -283,14 +319,25 @@ impl Mul for HInt {
             - self.c as I64 * other.b as I64
             + self.d as I64 * other.a as I64;
 
-        HInt::new(a as I32, b as I32, c as I32, d as I32)
+        // Divide by 2 to maintain *2 storage (since we multiplied *2 * *2 = *4)
+        HInt {
+            a: (a / 2) as I32,
+            b: (b / 2) as I32,
+            c: (c / 2) as I32,
+            d: (d / 2) as I32,
+        }
     }
 }
 
 impl Neg for HInt {
     type Output = HInt;
     fn neg(self) -> HInt {
-        HInt::new(-self.a, -self.b, -self.c, -self.d)
+        HInt {
+            a: -self.a,
+            b: -self.b,
+            c: -self.c,
+            d: -self.d,
+        }
     }
 }
 

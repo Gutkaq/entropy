@@ -3,22 +3,22 @@ use std::ops::{Add, Sub, Mul, Neg};
 use crate::{I32, I64, U64};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ZIntError {
+pub enum CIntError {
     Overflow,
     DivisionByZero,
     NotDivisible,
     NoInverse,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ZIFraction {
-    pub num: ZInt,
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct CIFraction {
+    pub num: CInt,
     pub den: U64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
-pub struct ZInt {
+pub struct CInt {
     pub a: I32,
     pub b: I32,
 }
@@ -35,21 +35,21 @@ mod num_utils {
     }
 }
 
-impl ZInt {
+impl CInt {
     pub fn new(a: I32, b: I32) -> Self {
-        ZInt { a, b }
+        CInt { a, b }
     }
 
     pub fn zero() -> Self {
-        ZInt::new(0, 0)
+        CInt::new(0, 0)
     }
 
     pub fn one() -> Self {
-        ZInt::new(1, 0)
+        CInt::new(1, 0)
     }
 
     pub fn i() -> Self {
-        ZInt::new(0, 1)
+        CInt::new(0, 1)
     }
 
     pub fn is_zero(self) -> bool {
@@ -61,7 +61,7 @@ impl ZInt {
     }
 
     pub fn conj(self) -> Self {
-        ZInt { a: self.a, b: -self.b }
+        CInt { a: self.a, b: -self.b }
     }
 
     pub fn norm_squared(self) -> U64 {
@@ -83,36 +83,38 @@ impl ZInt {
         if self.is_zero() {
             return self;
         }
-        
+
         if self.a == 0 && self.b != 0 {
             return Self::new(self.b.abs(), 0);
         }
-        
+
         if self.a > 0 && self.b >= 0 {
             return self;
         }
+
         let assocs = self.associates();
         for candidate in &assocs {
             if candidate.a > 0 && candidate.b >= 0 {
                 return *candidate;
             }
         }
+
         for candidate in &assocs {
             if candidate.a > 0 {
                 return *candidate;
             }
         }
+
         assocs[0]
     }
 
-    pub fn div_rem(self, d: Self) -> Result<(Self, Self), ZIntError> {
+    pub fn div_rem(self, d: Self) -> Result<(Self, Self), CIntError> {
         if d.is_zero() {
-            return Err(ZIntError::DivisionByZero);
+            return Err(CIntError::DivisionByZero);
         }
 
         let norm_d = d.norm_squared() as I64;
         let d_conj = d.conj();
-        
         let num_a = self.a as I64 * d_conj.a as I64 - self.b as I64 * d_conj.b as I64;
         let num_b = self.a as I64 * d_conj.b as I64 + self.b as I64 * d_conj.a as I64;
 
@@ -121,74 +123,76 @@ impl ZInt {
 
         let q_real = q_real_f.round() as I32;
         let q_imag = q_imag_f.round() as I32;
-        let q = ZInt::new(q_real, q_imag);
 
+        let q = CInt::new(q_real, q_imag);
         let r = self - (q * d);
+
         Ok((q, r))
     }
 
-    pub fn div_exact(self, d: Self) -> Result<Self, ZIntError> {
+    pub fn div_exact(self, d: Self) -> Result<Self, CIntError> {
         let (q, r) = self.div_rem(d)?;
         if r.is_zero() {
             Ok(q)
         } else {
-            Err(ZIntError::NotDivisible)
+            Err(CIntError::NotDivisible)
         }
     }
 
-    pub fn inv_unit(self) -> Result<Self, ZIntError> {
+    pub fn inv_unit(self) -> Result<Self, CIntError> {
         if !self.is_unit() {
-            return Err(ZIntError::NoInverse);
+            return Err(CIntError::NoInverse);
         }
+
         let assocs = self.associates();
         for &unit in &assocs {
             if (self * unit).a == 1 && (self * unit).b == 0 {
                 return Ok(unit);
             }
         }
-        Err(ZIntError::NoInverse)
+
+        Err(CIntError::NoInverse)
     }
 
-    pub fn div_to_fraction(self, d: Self) -> Result<ZIFraction, ZIntError> {
+    pub fn div_to_fraction(self, d: Self) -> Result<CIFraction, CIntError> {
         if d.is_zero() {
-            return Err(ZIntError::DivisionByZero);
+            return Err(CIntError::DivisionByZero);
         }
+
         let d_conj = d.conj();
-        
         let num_a = self.a as I64 * d_conj.a as I64 - self.b as I64 * d_conj.b as I64;
         let num_b = self.a as I64 * d_conj.b as I64 + self.b as I64 * d_conj.a as I64;
-        let num = ZInt::new(num_a as I32, num_b as I32);
-        
+        let num = CInt::new(num_a as I32, num_b as I32);
         let den = d.norm_squared();
-        Ok(ZIFraction { num, den })
+
+        Ok(CIFraction { num, den })
     }
 
-    pub fn inv_fraction(self) -> Result<ZIFraction, ZIntError> {
+    pub fn inv_fraction(self) -> Result<CIFraction, CIntError> {
         if self.is_zero() {
-            return Err(ZIntError::DivisionByZero);
+            return Err(CIntError::DivisionByZero);
         }
+
         let conj = self.conj();
         let den = self.norm_squared();
-        Ok(ZIFraction { num: conj, den })
+        Ok(CIFraction { num: conj, den })
     }
 
-    pub fn reduce_fraction(frac: ZIFraction) -> ZIFraction {
+    pub fn reduce_fraction(frac: CIFraction) -> CIFraction {
         let a_abs = frac.num.a.abs() as U64;
         let b_abs = frac.num.b.abs() as U64;
-        
         let g1 = num_utils::integer_gcd(a_abs, b_abs);
         let g = num_utils::integer_gcd(g1, frac.den);
-        
+
         if g <= 1 {
             return frac;
         }
-        
-        let new_num = ZInt::new(
+
+        let new_num = CInt::new(
             (frac.num.a as I64 / g as I64) as I32,
             (frac.num.b as I64 / g as I64) as I32
         );
-        
-        ZIFraction {
+        CIFraction {
             num: new_num,
             den: frac.den / g,
         }
@@ -219,14 +223,13 @@ impl ZInt {
 
         while !r.is_zero() {
             let (q, remainder) = old_r.div_rem(r).unwrap();
-            
             old_r = r;
             r = remainder;
-            
+
             let new_s = old_s - (q * s);
             old_s = s;
             s = new_s;
-            
+
             let new_t = old_t - (q * t);
             old_t = t;
             t = new_t;
@@ -236,7 +239,7 @@ impl ZInt {
     }
 }
 
-impl Add for ZInt {
+impl Add for CInt {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
         Self {
@@ -246,7 +249,7 @@ impl Add for ZInt {
     }
 }
 
-impl Sub for ZInt {
+impl Sub for CInt {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self {
         Self {
@@ -256,19 +259,17 @@ impl Sub for ZInt {
     }
 }
 
-impl Mul for ZInt {
+impl Mul for CInt {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
-        // Use i64 arithmetic to match div_rem behavior
         let real = self.a as I64 * rhs.a as I64 - self.b as I64 * rhs.b as I64;
         let imag = self.a as I64 * rhs.b as I64 + self.b as I64 * rhs.a as I64;
-        
-        // Check for overflow
+
         if real > I32::MAX as I64 || real < I32::MIN as I64 ||
            imag > I32::MAX as I64 || imag < I32::MIN as I64 {
-            panic!("ZInt multiplication overflow");
+            panic!("CInt multiplication overflow");
         }
-        
+
         Self {
             a: real as I32,
             b: imag as I32,
@@ -276,19 +277,13 @@ impl Mul for ZInt {
     }
 }
 
-impl Neg for ZInt {
+impl Neg for CInt {
     type Output = Self;
     fn neg(self) -> Self {
         Self {
             a: self.a.wrapping_neg(),
             b: self.b.wrapping_neg(),
         }
-    }
-}
-
-impl std::fmt::Display for ZInt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} + {}i", self.a, self.b)
     }
 }
 
