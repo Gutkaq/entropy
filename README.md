@@ -6,7 +6,8 @@ Euclidean division. GCD. Half-integers. Non-commutative. Non-associative. Fast.
 Quick Start
 
 bash
-cargo test --release test_complete_api_showcase -- --nocapture
+
+    cargo test --release test_complete_api_showcase -- --nocapture
 
 What You Get
 
