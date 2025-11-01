@@ -14,7 +14,6 @@ impl HInt {
         let db = self.b - other.b;
         let dc = self.c - other.c;
         let dd = self.d - other.d;
-        // DIVIDE BY 4 since stored as 2*value each
         (da * da + db * db + dc * dc + dd * dd) / 4
     }
 
@@ -27,14 +26,17 @@ impl HInt {
     }
 
     pub fn fundamental_domain() -> ((i32, i32, i32, i32), (i32, i32, i32, i32)) {
-        ((1, 0, 0, 0), (0, 1, 1, 1))
+        ((2, 0, 0, 0), (0, 2, 2, 2))
     }
 
     pub fn lattice_volume() -> i32 {
         1
     }
 
-    pub fn is_in_lattice(_v: (i32, i32, i32, i32)) -> bool {
-        true
+    pub fn is_in_lattice(v: (i32, i32, i32, i32)) -> bool {
+        let sum = v.0 + v.1 + v.2 + v.3;
+        let all_even = v.0 % 2 == 0 && v.1 % 2 == 0 && v.2 % 2 == 0 && v.3 % 2 == 0;
+        let all_odd = v.0 % 2 != 0 && v.1 % 2 != 0 && v.2 % 2 != 0 && v.3 % 2 != 0;
+        (all_even || all_odd) && sum % 4 == 0
     }
 }

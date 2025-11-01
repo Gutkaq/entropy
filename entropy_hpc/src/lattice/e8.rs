@@ -18,7 +18,6 @@ impl OInt {
         let df = self.f - other.f;
         let dg = self.g - other.g;
         let dh = self.h - other.h;
-        // DIVIDE BY 4 since stored as 2*value each
         (da*da + db*db + dc*dc + dd*dd + de*de + df*df + dg*dg + dh*dh) / 4
     }
 
@@ -32,14 +31,19 @@ impl OInt {
     }
 
     pub fn fundamental_domain() -> ((i32, i32, i32, i32, i32, i32, i32, i32), (i32, i32, i32, i32, i32, i32, i32, i32)) {
-        ((1, 0, 0, 0, 0, 0, 0, 0), (0, 1, 1, 1, 1, 0, 0, 0))
+        ((2, 0, 0, 0, 0, 0, 0, 0), (0, 2, 2, 2, 2, 0, 0, 0))
     }
 
     pub fn lattice_volume() -> i32 {
         1
     }
 
-    pub fn is_in_lattice(_v: (i32, i32, i32, i32, i32, i32, i32, i32)) -> bool {
-        true
+    pub fn is_in_lattice(v: (i32, i32, i32, i32, i32, i32, i32, i32)) -> bool {
+        let sum = v.0 + v.1 + v.2 + v.3 + v.4 + v.5 + v.6 + v.7;
+        let all_even = v.0 % 2 == 0 && v.1 % 2 == 0 && v.2 % 2 == 0 && v.3 % 2 == 0 &&
+                       v.4 % 2 == 0 && v.5 % 2 == 0 && v.6 % 2 == 0 && v.7 % 2 == 0;
+        let all_odd = v.0 % 2 != 0 && v.1 % 2 != 0 && v.2 % 2 != 0 && v.3 % 2 != 0 &&
+                      v.4 % 2 != 0 && v.5 % 2 != 0 && v.6 % 2 != 0 && v.7 % 2 != 0;
+        (all_even || all_odd) && sum % 4 == 0
     }
 }
