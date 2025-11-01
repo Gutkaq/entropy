@@ -1,8 +1,8 @@
 // src/simd/simd_engine.rs
 
-use crate::cint::CInt;
-use crate::hint::HInt;
-use crate::oint::OInt;
+use crate::types::cint::CInt;
+use crate::types::hint::HInt;
+use crate::types::oint::OInt;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;

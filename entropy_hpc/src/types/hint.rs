@@ -1,5 +1,4 @@
 use std::ops::{Add, Sub, Mul, Neg};
-use crate::{I32, I64, U64};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HIntError {
@@ -13,21 +12,20 @@ pub enum HIntError {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct HIFraction {
     pub num: HInt,
-    pub den: U64,
+    pub den: u64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
 pub struct HInt {
-    pub a: I32,  // Stored as 2*actual_value (even for integers, odd for half-integers)
-    pub b: I32,
-    pub c: I32,
-    pub d: I32,
+    pub a: i32,  // Stored as 2*actual_value (even for integers, odd for half-integers)
+    pub b: i32,
+    pub c: i32,
+    pub d: i32,
 }
 
 mod num_utils {
-    use super::U64;
-    pub fn integer_gcd(mut a: U64, mut b: U64) -> U64 {
+    pub fn integer_gcd(mut a: u64, mut b: u64) -> u64 {
         while b != 0 {
             let temp = b;
             b = a % b;
@@ -39,7 +37,7 @@ mod num_utils {
 
 impl HInt {
     // Create from integers (e.g., new(1,2,3,4) = 1 + 2i + 3j + 4k)
-    pub fn new(a: I32, b: I32, c: I32, d: I32) -> Self {
+    pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self {
         HInt {
             a: a * 2,
             b: b * 2,
@@ -51,7 +49,7 @@ impl HInt {
     // Create from half-integers: all components must have same parity
     // e.g., from_halves(1,1,1,1) = 0.5 + 0.5i + 0.5j + 0.5k (all odd = half-integers)
     // from_halves(2,2,2,2) = 1 + 1i + 1j + 1k (all even = integers)
-    pub fn from_halves(a: I32, b: I32, c: I32, d: I32) -> Result<Self, HIntError> {
+    pub fn from_halves(a: i32, b: i32, c: i32, d: i32) -> Result<Self, HIntError> {
         let a_odd = a % 2 != 0;
         let b_odd = b % 2 != 0;
         let c_odd = c % 2 != 0;
@@ -102,13 +100,13 @@ impl HInt {
         }
     }
 
-    pub fn norm_squared(self) -> U64 {
+    pub fn norm_squared(self) -> u64 {
         // N(q) = (a^2 + b^2 + c^2 + d^2) / 4 since stored as 2*value
-        let a2: I64 = self.a as I64 * self.a as I64;
-        let b2: I64 = self.b as I64 * self.b as I64;
-        let c2: I64 = self.c as I64 * self.c as I64;
-        let d2: I64 = self.d as I64 * self.d as I64;
-        ((a2 + b2 + c2 + d2) / 4) as U64
+        let a2: i64 = self.a as i64 * self.a as i64;
+        let b2: i64 = self.b as i64 * self.b as i64;
+        let c2: i64 = self.c as i64 * self.c as i64;
+        let d2: i64 = self.d as i64 * self.d as i64;
+        ((a2 + b2 + c2 + d2) / 4) as u64
     }
 
     pub fn div_rem(self, d: HInt) -> Result<(HInt, HInt), HIntError> {
@@ -116,7 +114,7 @@ impl HInt {
             return Err(HIntError::DivisionByZero);
         }
 
-        let d_norm = d.norm_squared() as I64;
+        let d_norm = d.norm_squared() as i64;
         let d_conj = d.conj();
 
         // Compute self * conj(d) (result is already stored * 2)
@@ -130,10 +128,10 @@ impl HInt {
 
         // Round and store as *2
         let q = HInt {
-            a: (q_a_f.round() * 2.0) as I32,
-            b: (q_b_f.round() * 2.0) as I32,
-            c: (q_c_f.round() * 2.0) as I32,
-            d: (q_d_f.round() * 2.0) as I32,
+            a: (q_a_f.round() * 2.0) as i32,
+            b: (q_b_f.round() * 2.0) as i32,
+            c: (q_c_f.round() * 2.0) as i32,
+            d: (q_d_f.round() * 2.0) as i32,
         };
 
         let r = self - (q * d);
@@ -161,10 +159,10 @@ impl HInt {
     }
 
     pub fn reduce_fraction(frac: HIFraction) -> HIFraction {
-        let a_abs = frac.num.a.abs() as U64;
-        let b_abs = frac.num.b.abs() as U64;
-        let c_abs = frac.num.c.abs() as U64;
-        let d_abs = frac.num.d.abs() as U64;
+        let a_abs = frac.num.a.abs() as u64;
+        let b_abs = frac.num.b.abs() as u64;
+        let c_abs = frac.num.c.abs() as u64;
+        let d_abs = frac.num.d.abs() as u64;
         
         let g1 = num_utils::integer_gcd(a_abs, b_abs);
         let g2 = num_utils::integer_gcd(c_abs, d_abs);
@@ -299,32 +297,32 @@ impl Mul for HInt {
         
         // Working with 2*values, result needs /4 total (but we keep *2 storage)
         // So multiply and divide by 2 once
-        let a = self.a as I64 * other.a as I64
-            - self.b as I64 * other.b as I64
-            - self.c as I64 * other.c as I64
-            - self.d as I64 * other.d as I64;
+        let a = self.a as i64 * other.a as i64
+            - self.b as i64 * other.b as i64
+            - self.c as i64 * other.c as i64
+            - self.d as i64 * other.d as i64;
 
-        let b = self.a as I64 * other.b as I64
-            + self.b as I64 * other.a as I64
-            + self.c as I64 * other.d as I64
-            - self.d as I64 * other.c as I64;
+        let b = self.a as i64 * other.b as i64
+            + self.b as i64 * other.a as i64
+            + self.c as i64 * other.d as i64
+            - self.d as i64 * other.c as i64;
 
-        let c = self.a as I64 * other.c as I64
-            - self.b as I64 * other.d as I64
-            + self.c as I64 * other.a as I64
-            + self.d as I64 * other.b as I64;
+        let c = self.a as i64 * other.c as i64
+            - self.b as i64 * other.d as i64
+            + self.c as i64 * other.a as i64
+            + self.d as i64 * other.b as i64;
 
-        let d = self.a as I64 * other.d as I64
-            + self.b as I64 * other.c as I64
-            - self.c as I64 * other.b as I64
-            + self.d as I64 * other.a as I64;
+        let d = self.a as i64 * other.d as i64
+            + self.b as i64 * other.c as i64
+            - self.c as i64 * other.b as i64
+            + self.d as i64 * other.a as i64;
 
         // Divide by 2 to maintain *2 storage (since we multiplied *2 * *2 = *4)
         HInt {
-            a: (a / 2) as I32,
-            b: (b / 2) as I32,
-            c: (c / 2) as I32,
-            d: (d / 2) as I32,
+            a: (a / 2) as i32,
+            b: (b / 2) as i32,
+            c: (c / 2) as i32,
+            d: (d / 2) as i32,
         }
     }
 }

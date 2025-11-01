@@ -1,5 +1,4 @@
 use std::ops::{Add, Sub, Mul, Neg};
-use crate::{I32, I64, U64};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OIntError {
@@ -13,20 +12,20 @@ pub enum OIntError {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct OIFraction {
     pub num: OInt,
-    pub den: U64,
+    pub den: u64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
 pub struct OInt {
-    pub a: I32,  // scalar (stored as 2*actual for half-integer support)
-    pub b: I32,  // e1
-    pub c: I32,  // e2
-    pub d: I32,  // e3
-    pub e: I32,  // e4
-    pub f: I32,  // e5
-    pub g: I32,  // e6
-    pub h: I32,  // e7
+    pub a: i32,  // scalar (stored as 2*actual for half-integer support)
+    pub b: i32,  // e1
+    pub c: i32,  // e2
+    pub d: i32,  // e3
+    pub e: i32,  // e4
+    pub f: i32,  // e5
+    pub g: i32,  // e6
+    pub h: i32,  // e7
 }
 
 // Fano plane multiplication table
@@ -87,8 +86,7 @@ mod fano_plane {
 }
 
 mod num_utils {
-    use super::U64;
-    pub fn integer_gcd(mut a: U64, mut b: U64) -> U64 {
+    pub fn integer_gcd(mut a: u64, mut b: u64) -> u64 {
         while b != 0 {
             let temp = b;
             b = a % b;
@@ -100,7 +98,7 @@ mod num_utils {
 
 impl OInt {
     // Create from integers (stored as 2*actual)
-    pub fn new(a: I32, b: I32, c: I32, d: I32, e: I32, f: I32, g: I32, h: I32) -> Self {
+    pub fn new(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32) -> Self {
         OInt {
             a: a * 2,
             b: b * 2,
@@ -114,7 +112,7 @@ impl OInt {
     }
 
     // Create from half-integers (all same parity)
-    pub fn from_halves(a: I32, b: I32, c: I32, d: I32, e: I32, f: I32, g: I32, h: I32) 
+    pub fn from_halves(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32) 
         -> Result<Self, OIntError> {
         let components = [a, b, c, d, e, f, g, h];
         let first_odd = components[0] % 2 != 0;
@@ -165,12 +163,12 @@ impl OInt {
         }
     }
 
-    pub fn norm_squared(self) -> U64 {
+    pub fn norm_squared(self) -> u64 {
         let components = [self.a, self.b, self.c, self.d, self.e, self.f, self.g, self.h];
-        let sum: I64 = components.iter()
-            .map(|&x| (x as I64) * (x as I64))
+        let sum: i64 = components.iter()
+            .map(|&x| (x as i64) * (x as i64))
             .sum();
-        (sum / 4) as U64  // Divide by 4 for *2 storage
+        (sum / 4) as u64  // Divide by 4 for *2 storage
     }
 
     pub fn div_rem(self, d: Self) -> Result<(Self, Self), OIntError> {
@@ -178,7 +176,7 @@ impl OInt {
             return Err(OIntError::DivisionByZero);
         }
 
-        let d_norm = d.norm_squared() as I64;
+        let d_norm = d.norm_squared() as i64;
         let d_conj = d.conj();
         let num_prod = self * d_conj;
 
@@ -188,10 +186,10 @@ impl OInt {
             num_prod.e, num_prod.f, num_prod.g, num_prod.h
         ];
 
-        let q_components: Vec<I32> = components.iter()
+        let q_components: Vec<i32> = components.iter()
             .map(|&x| {
                 let val = (x as f64) / (d_norm as f64 * 2.0);
-                (val.round() * 2.0) as I32
+                (val.round() * 2.0) as i32
             })
             .collect();
 
@@ -231,10 +229,10 @@ impl OInt {
 
     pub fn reduce_fraction(frac: OIFraction) -> OIFraction {
         let components = [
-            frac.num.a.abs() as U64, frac.num.b.abs() as U64,
-            frac.num.c.abs() as U64, frac.num.d.abs() as U64,
-            frac.num.e.abs() as U64, frac.num.f.abs() as U64,
-            frac.num.g.abs() as U64, frac.num.h.abs() as U64,
+            frac.num.a.abs() as u64, frac.num.b.abs() as u64,
+            frac.num.c.abs() as u64, frac.num.d.abs() as u64,
+            frac.num.e.abs() as u64, frac.num.f.abs() as u64,
+            frac.num.g.abs() as u64, frac.num.h.abs() as u64,
         ];
         
         let mut g = components[0];
@@ -416,14 +414,14 @@ impl Mul for OInt {
 
         // Divide by 2 to maintain *2 storage
         OInt {
-            a: (result[0] / 2) as I32,
-            b: (result[1] / 2) as I32,
-            c: (result[2] / 2) as I32,
-            d: (result[3] / 2) as I32,
-            e: (result[4] / 2) as I32,
-            f: (result[5] / 2) as I32,
-            g: (result[6] / 2) as I32,
-            h: (result[7] / 2) as I32,
+            a: (result[0] / 2) as i32,
+            b: (result[1] / 2) as i32,
+            c: (result[2] / 2) as i32,
+            d: (result[3] / 2) as i32,
+            e: (result[4] / 2) as i32,
+            f: (result[5] / 2) as i32,
+            g: (result[6] / 2) as i32,
+            h: (result[7] / 2) as i32,
         }
     }
 }

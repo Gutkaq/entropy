@@ -1,8 +1,8 @@
 // src/display.rs
 
-use crate::cint::{CInt, CIFraction};
-use crate::hint::{HInt, HIFraction};
-use crate::oint::{OInt, OIFraction};
+use crate::types::cint::{CInt, CIFraction};
+use crate::types::hint::{HInt, HIFraction};
+use crate::types::oint::{OInt, OIFraction};
 use std::fmt;
 
 // ========================================================================

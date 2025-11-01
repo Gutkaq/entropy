@@ -1,6 +1,5 @@
 use std::ops::{Add, Sub, Mul, Neg};
 
-use crate::{I32, I64, U64};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CIntError {
@@ -13,19 +12,18 @@ pub enum CIntError {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CIFraction {
     pub num: CInt,
-    pub den: U64,
+    pub den: u64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
 pub struct CInt {
-    pub a: I32,
-    pub b: I32,
+    pub a: i32,
+    pub b: i32,
 }
 
 mod num_utils {
-    use super::U64;
-    pub fn integer_gcd(mut a: U64, mut b: U64) -> U64 {
+    pub fn integer_gcd(mut a: u64, mut b: u64) -> u64 {
         while b != 0 {
             let temp = b;
             b = a % b;
@@ -36,7 +34,7 @@ mod num_utils {
 }
 
 impl CInt {
-    pub fn new(a: I32, b: I32) -> Self {
+    pub fn new(a: i32, b: i32) -> Self {
         CInt { a, b }
     }
 
@@ -64,10 +62,10 @@ impl CInt {
         CInt { a: self.a, b: -self.b }
     }
 
-    pub fn norm_squared(self) -> U64 {
-        let a2: I64 = self.a as I64 * self.a as I64;
-        let b2: I64 = self.b as I64 * self.b as I64;
-        (a2 + b2) as U64
+    pub fn norm_squared(self) -> u64 {
+        let a2: i64 = self.a as i64 * self.a as i64;
+        let b2: i64 = self.b as i64 * self.b as i64;
+        (a2 + b2) as u64
     }
 
     pub fn associates(self) -> [Self; 4] {
@@ -113,16 +111,16 @@ impl CInt {
             return Err(CIntError::DivisionByZero);
         }
 
-        let norm_d = d.norm_squared() as I64;
+        let norm_d = d.norm_squared() as i64;
         let d_conj = d.conj();
-        let num_a = self.a as I64 * d_conj.a as I64 - self.b as I64 * d_conj.b as I64;
-        let num_b = self.a as I64 * d_conj.b as I64 + self.b as I64 * d_conj.a as I64;
+        let num_a = self.a as i64 * d_conj.a as i64 - self.b as i64 * d_conj.b as i64;
+        let num_b = self.a as i64 * d_conj.b as i64 + self.b as i64 * d_conj.a as i64;
 
         let q_real_f = num_a as f64 / norm_d as f64;
         let q_imag_f = num_b as f64 / norm_d as f64;
 
-        let q_real = q_real_f.round() as I32;
-        let q_imag = q_imag_f.round() as I32;
+        let q_real = q_real_f.round() as i32;
+        let q_imag = q_imag_f.round() as i32;
 
         let q = CInt::new(q_real, q_imag);
         let r = self - (q * d);
@@ -160,9 +158,9 @@ impl CInt {
         }
 
         let d_conj = d.conj();
-        let num_a = self.a as I64 * d_conj.a as I64 - self.b as I64 * d_conj.b as I64;
-        let num_b = self.a as I64 * d_conj.b as I64 + self.b as I64 * d_conj.a as I64;
-        let num = CInt::new(num_a as I32, num_b as I32);
+        let num_a = self.a as i64 * d_conj.a as i64 - self.b as i64 * d_conj.b as i64;
+        let num_b = self.a as i64 * d_conj.b as i64 + self.b as i64 * d_conj.a as i64;
+        let num = CInt::new(num_a as i32, num_b as i32);
         let den = d.norm_squared();
 
         Ok(CIFraction { num, den })
@@ -179,8 +177,8 @@ impl CInt {
     }
 
     pub fn reduce_fraction(frac: CIFraction) -> CIFraction {
-        let a_abs = frac.num.a.abs() as U64;
-        let b_abs = frac.num.b.abs() as U64;
+        let a_abs = frac.num.a.abs() as u64;
+        let b_abs = frac.num.b.abs() as u64;
         let g1 = num_utils::integer_gcd(a_abs, b_abs);
         let g = num_utils::integer_gcd(g1, frac.den);
 
@@ -189,8 +187,8 @@ impl CInt {
         }
 
         let new_num = CInt::new(
-            (frac.num.a as I64 / g as I64) as I32,
-            (frac.num.b as I64 / g as I64) as I32
+            (frac.num.a as i64 / g as i64) as i32,
+            (frac.num.b as i64 / g as i64) as i32
         );
         CIFraction {
             num: new_num,
@@ -262,17 +260,17 @@ impl Sub for CInt {
 impl Mul for CInt {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
-        let real = self.a as I64 * rhs.a as I64 - self.b as I64 * rhs.b as I64;
-        let imag = self.a as I64 * rhs.b as I64 + self.b as I64 * rhs.a as I64;
+        let real = self.a as i64 * rhs.a as i64 - self.b as i64 * rhs.b as i64;
+        let imag = self.a as i64 * rhs.b as i64 + self.b as i64 * rhs.a as i64;
 
-        if real > I32::MAX as I64 || real < I32::MIN as I64 ||
-           imag > I32::MAX as I64 || imag < I32::MIN as I64 {
+        if real > i32::MAX as i64 || real < i32::MIN as i64 ||
+           imag > i32::MAX as i64 || imag < i32::MIN as i64 {
             panic!("CInt multiplication overflow");
         }
 
         Self {
-            a: real as I32,
-            b: imag as I32,
+            a: real as i32,
+            b: imag as i32,
         }
     }
 }
