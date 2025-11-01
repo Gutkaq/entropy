@@ -1,597 +1,262 @@
-entropy_hpc: API Documentation
-Overview
-
-entropy_hpc is a high-performance Rust library for SIMD-accelerated Euclidean lattice algebra. It implements three increasingly sophisticated normed division algebras:
-
-    CInt (Gaussian Integers): ℤ[i] - 2D complex integers
-
-    HInt (Hurwitz Quaternions): Half-integer or full-integer quaternions - 4D hypercomplex
-
-    OInt (Integer Octonions): 8D non-associative algebra with Fano plane multiplication
-
-All types support Euclidean division, GCD computation, fractional arithmetic, and AVX2 SIMD acceleration.
-Module: cint (Complex Integers ℤ[i])
-Types
-CInt
-
-Represents a Gaussian integer: a + bi where a, b ∈ ℤ.
-
-Fields:
-
-    a: i32 - Real part
-
-    b: i32 - Imaginary part
-
-CIFraction
-
-Represents a fraction of Gaussian integers: numerator / denominator.
-
-Fields:
-
-    num: CInt - Numerator
-
-    den: u64 - Denominator (always positive)
-
-CIntError
-
-Error type for CInt operations.
-
-Variants:
-
-    Overflow - Arithmetic overflow in multiplication
-
-    DivisionByZero - Attempted division by zero
-
-    NotDivisible - Exact division failed (non-zero remainder)
-
-    NoInverse - Element has no inverse
-
-Constructors
-
-rust
-pub fn new(a: i32, b: i32) -> Self
-
-Create a Gaussian integer from real and imaginary parts.
-
-rust
-pub fn zero() -> Self
-
-Return 0 + 0i (additive identity).
-
-rust
-pub fn one() -> Self
-
-Return 1 + 0i (multiplicative identity).
-
-rust
-pub fn i() -> Self
-
-Return 0 + 1i (imaginary unit).
-Properties
-
-rust
-pub fn is_zero(self) -> bool
-
-Check if equals zero.
-
-rust
-pub fn is_unit(self) -> bool
-
-Check if unit (norm = 1). Units in ℤ[i]: ±1, ±i.
-
-rust
-pub fn norm_squared(self) -> u64
-
-Compute N(a+bi) = a² + b² (Euclidean norm squared).
-
-rust
-pub fn conj(self) -> Self
-
-Conjugate: a + bi → a - bi.
-
-rust
-pub fn normalize(self) -> Self
-
-Normalize to canonical form (prioritize positive real part).
-
-rust
-pub fn associates(self) -> [Self; 4]
-
-Return all 4 unit associates: {z, -z, iz, -iz}.
-Arithmetic Operations
-
-rust
-impl Add for CInt { ... }
-impl Sub for CInt { ... }
-impl Mul for CInt { ... }
-impl Neg for CInt { ... }
-
-All standard operators with wrapping/panicking on overflow in mul.
-Division & GCD
-
-rust
-pub fn div_rem(self, d: Self) -> Result<(Self, Self), CIntError>
-
-Euclidean division: returns (q, r) where self = q*d + r and N(r) < N(d).
-
-rust
-pub fn div_exact(self, d: Self) -> Result<Self, CIntError>
-
-Exact division: returns q if self = q*d exactly, else error.
-
-rust
-pub fn gcd(a: Self, b: Self) -> Self
-
-Compute GCD using Euclidean algorithm (returns normalized result).
-
-rust
-pub fn xgcd(a: Self, b: Self) -> (Self, Self, Self)
-
-Extended GCD: returns (g, x, y) where g = ax + by (Bézout identity).
-Fractions
-
-rust
-pub fn div_to_fraction(self, d: Self) -> Result<CIFraction, CIntError>
-
-Convert division to fraction form: self/d = (self·conj(d)) / N(d).
-
-rust
-pub fn inv_fraction(self) -> Result<CIFraction, CIntError>
-
-Multiplicative inverse as fraction: 1/self = conj(self) / N(self).
-
-rust
-pub fn reduce_fraction(frac: CIFraction) -> CIFraction
-
-Reduce fraction by GCD of numerator components and denominator.
-
-rust
-pub fn inv_unit(self) -> Result<Self, CIntError>
-
-Inverse of a unit: for units, returns conjugate (since N=1).
-Module: hint (Hurwitz Quaternions)
-Types
-HInt
-
-Represents a Hurwitz quaternion: a + bi + cj + dk (half-integers or full integers).
-
-Fields:
-
-    a: i32 - Stored as 2×actual value
-
-    b: i32 - Imaginary i component (2×actual)
-
-    c: i32 - Imaginary j component (2×actual)
-
-    d: i32 - Imaginary k component (2×actual)
-
-Storage as 2× allows uniform handling of half-integers (odd values) and integers (even values).
-HIFraction
-
-Fraction of Hurwitz quaternions.
-
-Fields:
-
-    num: HInt - Numerator
-
-    den: u64 - Denominator
-
-HIntError
-
-Error type.
-
-Variants:
-
-    Overflow, DivisionByZero, NotDivisible, NoInverse (same as CInt)
-
-    InvalidHalfInteger - Mixed parity in from_halves (half and integer components together)
-
-Constructors
-
-rust
-pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self
-
-Create from integers. Internally stores as 2× each component.
-
-rust
-pub fn from_halves(a: i32, b: i32, c: i32, d: i32) -> Result<Self, HIntError>
-
-Create from half-integers. All components must have same parity (all odd for halves, all even for integers). No mixing allowed.
-
-rust
-pub fn zero() -> Self
-
-Return 0 + 0i + 0j + 0k.
-
-rust
-pub fn one() -> Self
-
-Return 1 + 0i + 0j + 0k.
-
-rust
-pub fn i() -> Self
-
-Return 0 + 1i + 0j + 0k.
-
-rust
-pub fn j() -> Self
-
-Return 0 + 0i + 1j + 0k.
-
-rust
-pub fn k() -> Self
-
-Return 0 + 0i + 0j + 1k.
-Properties
-
-rust
-pub fn is_zero(self) -> bool
-
-Check if all components are zero.
-
-rust
-pub fn is_unit(self) -> bool
-
-Check if norm = 1 (units in Hurwitz integers).
-
-rust
-pub fn norm_squared(self) -> u64
-
-Compute N(q) = (a² + b² + c² + d²) / 4 (accounts for 2× storage).
-
-rust
-pub fn conj(self) -> Self
-
-Quaternion conjugate: a + bi + cj + dk → a - bi - cj - dk.
-
-rust
-pub fn to_float_components(self) -> (f64, f64, f64, f64)
-
-Convert to float: divides by 2 for display purposes.
-
-rust
-pub fn normalize(self) -> Self
-
-Normalize by ensuring positive real part (or multiply by unit if needed).
-
-rust
-pub fn associates(self) -> [HInt; 8]
-
-Return all 8 unit associates (multiply by each unit: ±1, ±i, ±j, ±k).
-Quaternion Algebra
-
-rust
-pub fn is_anticommutative_pair(a: Self, b: Self) -> bool
-
-Check if ab == -(ba). True for orthogonal basis elements (e.g., ij = -ji).
-
-rust
-pub fn is_associative_triple(a: Self, b: Self, c: Self) -> bool
-
-Check if (ab)c == a(bc). Always true for quaternions.
-Arithmetic
-
-rust
-impl Add, Sub, Mul, Neg for HInt { ... }
-
-All operators implemented. Mul is non-commutative.
-Division & GCD
-
-rust
-pub fn div_rem(self, d: HInt) -> Result<(HInt, HInt), HIntError>
-
-Euclidean division over quaternions.
-
-rust
-pub fn div_exact(self, d: HInt) -> Result<HInt, HIntError>
-
-Exact division.
-
-rust
-pub fn gcd(mut a: Self, mut b: Self) -> Self
-
-GCD computation (Euclidean algorithm). No extended GCD (non-commutative).
-Fractions
-
-rust
-pub fn div_to_fraction(self, den: HInt) -> Result<HIFraction, HIntError>
-
-Convert to fraction form.
-
-rust
-pub fn reduce_fraction(frac: HIFraction) -> HIFraction
-
-Reduce by GCD of all components.
-
-rust
-pub fn inv_fraction(self) -> Result<HIFraction, HIntError>
-
-Multiplicative inverse as fraction.
-
-rust
-pub fn inv_unit(self) -> Result<HInt, HIntError>
-
-Inverse of a unit: conjugate (since norm=1).
-Module: oint (Integer Octonions)
-Types
-OInt
-
-Represents an integer octonion: a + be₁ + ce₂ + de₃ + ee₄ + fe₅ + ge₆ + he₇.
-
-Fields:
-
-    a: i32 - Scalar part (2× storage for half-integer support)
-
-    b, c, d, e, f, g, h: i32 - Seven imaginary basis coefficients
-
-OIFraction
-
-Fraction of octonions.
-OIntError
-
-Same variants as CInt + InvalidHalfInteger.
-Constructors
-
-rust
-pub fn new(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32) -> Self
-
-Create from integers (stored as 2× each).
-
-rust
-pub fn from_halves(a: i32, ..., h: i32) -> Result<Self, OIntError>
-
-Create from half-integers. Parity check enforced (no mixing).
-
-rust
-pub fn zero() -> Self
-pub fn one() -> Self
-pub fn e1() -> Self
-pub fn e2() -> Self
-pub fn e3() -> Self
-pub fn e4() -> Self
-pub fn e5() -> Self
-pub fn e6() -> Self
-pub fn e7() -> Self
-
-Basis constructors.
-Properties
-
-rust
-pub fn is_zero(self) -> bool
-pub fn is_unit(self) -> bool
-pub fn norm_squared(self) -> u64
-pub fn conj(self) -> Self
-pub fn to_float_components(self) -> (f64, f64, f64, f64, f64, f64, f64, f64)
-pub fn normalize(self) -> Self
-pub fn associates(self) -> [OInt; 8]
-
-Same semantics as HInt.
-Octonion-Specific Algebra
-
-rust
-pub fn is_non_commutative_pair(a: Self, b: Self) -> bool
-
-Check if ab ≠ ba. True for most pairs (Fano plane).
-
-rust
-pub fn is_non_associative_triple(a: Self, b: Self, c: Self) -> bool
-
-Check if (ab)c ≠ a(bc). True for some triples (defining property of octonions).
-
-rust
-pub fn moufang_identity(a: Self, b: Self, c: Self) -> bool
-
-Check Moufang law: (ab)(ca) = a(b*c)*a. Always true for octonions.
-
-rust
-pub fn alternative_identity(a: Self, b: Self) -> bool
-
-Check alternativity: (aa)b = a(ab) AND (ab)b = a(bb). True for all octonions.
-Arithmetic & Division
-
-rust
-impl Add, Sub, Mul, Neg for OInt { ... }
-pub fn div_rem(self, d: Self) -> Result<(Self, Self), OIntError>
-pub fn div_exact(self, d: Self) -> Result<Self, OIntError>
-pub fn gcd(mut a: Self, mut b: Self) -> Self
-
-Same as HInt (Euclidean properties hold despite non-associativity).
-Fractions
-
-rust
-pub fn div_to_fraction(self, den: Self) -> Result<OIFraction, OIntError>
-pub fn reduce_fraction(frac: OIFraction) -> OIFraction
-pub fn inv_fraction(self) -> Result<OIFraction, OIntError>
-pub fn inv_unit(self) -> Result<Self, OIntError>
-
-Same as HInt.
-Module: simd → simd_engine
-
-SIMD-accelerated batch operations with AVX2 when available, scalar fallback otherwise.
-CInt SIMD (4 elements at a time)
-
-rust
-pub fn cint_add_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-pub fn cint_sub_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-pub fn cint_mul_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-
-Batch operations for 4 Gaussian integers. Add/sub vectorized, mul scalar.
-
-rust
-pub fn cint_add_arrays(a: &[CInt], b: &[CInt], out: &mut [CInt])
-pub fn cint_sub_arrays(a: &[CInt], b: &[CInt], out: &mut [CInt])
-pub fn cint_mul_arrays(a: &[CInt], b: &[CInt], out: &mut [CInt])
-
-Array versions: process in 4-element chunks + tail scalar.
-HInt SIMD (2 elements at a time)
-
-rust
-pub fn hint_add_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-pub fn hint_sub_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-pub fn hint_mul_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-
-Batch for 2 quaternions (8 i32s = 256 bits). Add/sub vectorized, mul scalar.
-
-rust
-pub fn hint_add_arrays(a: &[HInt], b: &[HInt], out: &mut [HInt])
-pub fn hint_sub_arrays(a: &[HInt], b: &[HInt], out: &mut [HInt])
-pub fn hint_mul_arrays(a: &[HInt], b: &[HInt], out: &mut [HInt])
-
-Array versions: 2-element chunks + tail.
-OInt SIMD (1 element, 8D vectorized)
-
-rust
-pub fn oint_add_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-pub fn oint_sub_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-pub fn oint_mul_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-
-Full 8D vectorized add/sub in single 256-bit AVX2 instruction. Mul scalar.
-
-rust
-pub fn oint_add_arrays(a: &[OInt], b: &[OInt], out: &mut [OInt])
-pub fn oint_sub_arrays(a: &[OInt], b: &[OInt], out: &mut [OInt])
-pub fn oint_mul_arrays(a: &[OInt], b: &[OInt], out: &mut [OInt])
-
-Array versions: SIMD per element for add/sub, scalar mul.
-Module: display
-
-Formatting and display implementations.
-CInt Display
-
-rust
-impl Display for CInt
-impl Display for CIFraction
-
-Format: a + bi, (num) / den
-HInt Display
-
-rust
-impl Display for HInt
-impl Display for HIFraction
-
-Format: a + bi + cj + dk (with proper signs, handles halves as 1/2).
-Fraction: (a + bi + cj + dk) / den
-OInt Display
-
-rust
-impl Display for OInt
-impl Display for OIFraction
-
-Format: a + be₁ + ce₂ + de₃ + ee₄ + fe₅ + ge₆ + he₇ (8D full).
-Fraction: (8D components) / den
-Debug Implementations
-
-rust
-impl Debug for CInt, CIFraction, HInt, HIFraction, OInt, OIFraction
-
-Delegate to Display for readable debug output.
-Example Usage
-CInt
-
-rust
+# entropy_hpc — API Documentation
+
+entropy_hpc is a high-performance Rust crate for SIMD-accelerated Euclidean lattice algebra and algebraic-integer arithmetic.  
+It implements three related algebra families with consistent APIs, lattice helpers, and SIMD batch operations:
+
+- CInt — Gaussian integers (ℤ[i]) — 2D complex integers  
+- HInt — Hurwitz quaternions (Hurwitz integers) — 4D (supports half-integers)  
+- OInt — Integer octonions — 8D (non-associative, Fano-plane multiplication)
+
+All types provide arithmetic, Euclidean division, GCD, fraction representations, human-friendly Display/Debug, and AVX2 SIMD-accelerated batch add/sub helpers with scalar fallbacks.
+
+---
+
+Table of contents
+- Quick overview
+- Design & storage conventions
+- Public types
+  - CInt (Gaussian integers)
+  - HInt (Hurwitz quaternions)
+  - OInt (Integer octonions)
+- Lattice helpers (Z² / D₄ / E₈)
+- SIMD API (simd::)
+- Display & Debug
+- Error types
+- Examples (usage snippets)
+- Performance & notes
+- Development & testing
+
+---
+
+Quick overview
+--------------
+- Crate: entropy_hpc
+- Version: 0.3.0 (see entropy_hpc/Cargo.toml)
+- Purpose: correct, tested algebraic-number types + high-performance SIMD batch helpers for lattice geometry (A2/Z², D4, E8)
+- License: MIT (declared in entropy_hpc/Cargo.toml)
+
+Design & storage conventions
+----------------------------
+- HInt and OInt store components multiplied by two (stored_value = 2 * mathematical_value). This lets the same representation handle integers and half-integers: integer components are even, half-integers are odd.
+- Arithmetic operator traits are implemented (Add, Sub, Mul, Neg) for ergonomic arithmetic in Rust.
+- Division APIs return Result<T, Error> (div_rem, div_exact). Fraction types represent numerators + denominators for exact rational-style results.
+- SIMD code uses AVX2 intrinsics on x86_64 when available (runtime-detected) and falls back to scalar implementations otherwise.
+
+Public types
+------------
+
+CInt — Gaussian integers (ℤ[i])
+- Declaration:
+  - repr(C) pub struct CInt { pub a: i32, pub b: i32 }
+- Constructors:
+  - CInt::new(a: i32, b: i32) -> CInt
+  - CInt::zero(), CInt::one(), CInt::i()
+- Core ops:
+  - impl Add, Sub, Mul, Neg
+  - Note: Mul uses i64 intermediates and panics on overflow when result does not fit in i32.
+- Utilities:
+  - is_zero() -> bool
+  - is_unit() -> bool
+  - conj() -> CInt
+  - norm_squared() -> u64
+  - normalize() -> CInt
+  - associates() -> [CInt; 4]
+- Division & Fractions:
+  - div_rem(self, d: CInt) -> Result<(CInt, CInt), CIntError> — returns (q, r) with self = q*d + r and N(r) < N(d)
+  - div_exact(self, d: CInt) -> Result<CInt, CIntError>
+  - div_to_fraction(self, d: CInt) -> Result<CIFraction, CIntError>
+  - inv_fraction(self) -> Result<CIFraction, CIntError>
+  - reduce_fraction(frac: CIFraction) -> CIFraction
+  - gcd(a: CInt, b: CInt) -> CInt
+  - xgcd(a: CInt, b: CInt) -> (g: CInt, x: CInt, y: CInt)
+- Lattice helpers (Z²):
+  - to_lattice_vector(self) -> (i32, i32)
+  - from_lattice_vector(v: (i32, i32)) -> CInt
+  - lattice_distance_squared(self, other: CInt) -> i32
+  - lattice_norm_squared(self) -> i32
+  - closest_lattice_point_int(target: (i32, i32)) -> CInt
+  - fundamental_domain() -> ((i32, i32), (i32, i32))
+  - lattice_volume() -> i32
+  - is_in_lattice(v: (i32, i32)) -> bool
+
+HInt — Hurwitz quaternions (Hurwitz integers)
+- Declaration:
+  - repr(C) pub struct HInt { pub a: i32, pub b: i32, pub c: i32, pub d: i32 } (stored as 2×value)
+- Constructors:
+  - HInt::new(a, b, c, d) — accepts integer arguments (stored internally *2)
+  - HInt::from_halves(a, b, c, d) -> Result<HInt, HIntError> — accepts parity-homogeneous half/integer inputs
+  - zero(), one(), i(), j(), k()
+- Core ops:
+  - impl Add, Sub, Mul, Neg
+  - Mul implements quaternion multiplication adapted for 2× storage
+- Utilities:
+  - is_zero(), is_unit(), conj(), norm_squared() -> u64
+  - to_float_components() -> (f64,f64,f64,f64) — divide stored components by 2 for display
+  - normalize(), associates() -> [HInt; 8]
+  - is_anticommutative_pair(a, b) -> bool
+  - is_associative_triple(a, b, c) -> bool
+- Division & Fractions:
+  - div_rem(self, d: HInt) -> Result<(HInt,HInt), HIntError>
+  - div_exact(self, d: HInt) -> Result<HInt, HIntError>
+  - div_to_fraction(self, den: HInt) -> Result<HIFraction, HIntError>
+  - reduce_fraction(frac: HIFraction) -> HIFraction
+  - inv_fraction(self) -> Result<HIFraction, HIntError>
+  - inv_unit(self) -> Result<HInt, HIntError>
+  - gcd(a: HInt, b: HInt) -> HInt
+- Lattice helpers (D₄):
+  - to_lattice_vector(), from_lattice_vector(), lattice_distance_squared(), lattice_norm_squared(), closest_lattice_point_int(), fundamental_domain(), lattice_volume(), is_in_lattice()
+
+OInt — Integer octonions
+- Declaration:
+  - repr(C) pub struct OInt { pub a,b,c,d,e,f,g,h: i32 } (stored as 2×value)
+- Constructors:
+  - OInt::new(a..h)
+  - OInt::from_halves(...) -> Result<OInt, OIntError>
+  - zero(), one(), e1()..e7()
+- Core ops:
+  - impl Add, Sub, Mul, Neg
+  - Mul implements Fano-plane based octonion multiplication and uses 2× storage conventions
+- Utilities:
+  - is_zero(), is_unit(), conj(), norm_squared(), to_float_components()
+  - normalize(), associates()
+  - is_non_commutative_pair(a,b), is_non_associative_triple(a,b,c)
+  - alternative_identity(a,b) -> bool
+  - moufang_identity(a,b,c) -> bool
+- Division & Fractions:
+  - div_rem(self, d: OInt) -> Result<(OInt, OInt), OIntError>
+  - div_exact, div_to_fraction, reduce_fraction, inv_fraction, inv_unit, gcd
+- Lattice helpers (E₈): analogous 8D helpers as for CInt/HInt, adapted for parity rule used by E₈
+
+Lattice helpers (Z² / D₄ / E₈)
+--------------------------------
+- Each algebra type exposes convenience lattice helpers:
+  - to_lattice_vector / from_lattice_vector
+  - lattice_distance_squared / lattice_norm_squared
+  - closest_lattice_point_int
+  - fundamental_domain() -> basis vectors for the fundamental parallelotope
+  - lattice_volume() -> i32
+  - is_in_lattice(...) -> bool (parity / membership constraints)
+- These are used by the SIMD lattice helpers to implement batch routines.
+
+SIMD API (crate simd)
+---------------------
+- Module: entropy_hpc::simd
+- Purpose: batch transformations and AVX2-accelerated add/sub for small fixed-size vectors
+- Key simd_engine functions:
+  - CInt (4-element lanes):
+    - cint_add_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
+    - cint_sub_batch(...)
+    - cint_mul_batch(...)  // scalar multiplication fallback
+    - cint_add_arrays(a:&[CInt], b:&[CInt], out:&mut [CInt]) — chunked by 4 with tail
+    - cint_sub_arrays, cint_mul_arrays
+  - HInt (2-element lanes):
+    - hint_add_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
+    - hint_sub_batch, hint_mul_batch
+    - hint_*_arrays — chunked by 2 with tail
+  - OInt (1-element 8×i32 lane):
+    - oint_add_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
+    - oint_sub_batch, oint_mul_batch
+    - oint_*_arrays
+- Runtime behavior:
+  - AVX2 intrinsics are used when the CPU supports them (is_x86_feature_detected!("avx2")), otherwise the scalar fallback is used to preserve correctness and portability.
+
+SIMD lattice batch helpers
+--------------------------
+- Module: simd::lattice_simd (also simd_lattice)
+- LatticeSimd offers thin batch wrappers:
+  - Z² (A2): z2_to_lattice_batch, z2_from_lattice_batch, z2_distance_squared_batch, z2_norm_squared_batch, z2_closest_point_batch, z2_fundamental_domain_batch, z2_volume_batch, z2_in_lattice_batch
+  - D₄: d4_... equivalents for HInt
+  - E₈: e8_... equivalents for OInt
+- These are implemented as safe, element-wise mappers returning Vecs (and on some platforms they can be chunked for SIMD-friendly iteration).
+
+Display & Debug
+---------------
+- Display implementations:
+  - CInt: "a + bi"
+  - CIFraction: "(<num>) / <den>"
+  - HInt: "a + bi + cj + dk" — prints half-integers nicely (e.g., "1/2")
+  - HIFraction: "(...) / den"
+  - OInt: "a + be₁ + ce₂ + ... + he₇"
+  - OIFraction: "(...) / den"
+- Debug implementations delegate to Display for readable output in tests and logs.
+
+Error types
+-----------
+- CIntError: { Overflow, DivisionByZero, NotDivisible, NoInverse }
+- HIntError: { Overflow, DivisionByZero, NotDivisible, NoInverse, InvalidHalfInteger }
+- OIntError: { Overflow, DivisionByZero, NotDivisible, NoInverse, InvalidHalfInteger }
+
+Examples (usage snippets)
+-------------------------
+CInt basic
+```rust
 use entropy_hpc::CInt;
 
 let a = CInt::new(3, 4);
 let b = CInt::new(1, 2);
-
-// Arithmetic
-println!("{} + {} = {}", a, b, a + b);  // 4 + 6i
-println!("{} * {} = {}", a, b, a * b);  // -5 + 10i
-
-// Euclidean division
+println!("{} + {} = {}", a, b, a + b);
 let (q, r) = a.div_rem(b).unwrap();
 println!("div: q={}, r={}", q, r);
+```
 
-// GCD
-let gcd = CInt::gcd(CInt::new(12, 0), CInt::new(18, 0));
-println!("gcd = {}", gcd);  // 6
-
-HInt
-
-rust
+HInt (half-integers)
+```rust
 use entropy_hpc::HInt;
 
 let q = HInt::new(1, 2, 3, 4);
-let halves = HInt::from_halves(1, 1, 1, 1).unwrap();  // 1/2 + 1/2i + 1/2j + 1/2k
+let h = HInt::from_halves(1, 1, 1, 1).unwrap(); // 1/2 + 1/2 i + 1/2 j + 1/2 k
+println!("q * q = {}", q * q);
+```
 
-// Quaternion algebra
-let i = HInt::i();
-let j = HInt::j();
-println!("i*j = {}", i * j);  // k
-println!("i*i = {}", i * i);  // -1
-
-// Norm multiplicativity
-let prod = q * q;
-println!("N(a*b) = {}, N(a)*N(b) = {}", prod.norm_squared(), q.norm_squared() * q.norm_squared());
-
-OInt
-
-rust
+OInt (octonions)
+```rust
 use entropy_hpc::OInt;
 
-let e1 = OInt::e1();
-let e2 = OInt::e2();
+let o1 = OInt::new(1,1,1,1,0,0,0,0);
+let o2 = OInt::e1();
+println!("o1 + o2 = {}", o1 + o2);
+assert!(OInt::alternative_identity(o1, o2));
+```
 
-// Non-commutative
-println!("e1*e2 = {}", e1 * e2);  // e4
-println!("e2*e1 = {}", e2 * e1);  // -e4
+SIMD / lattice batches
+```rust
+use entropy_hpc::{CInt, simd::LatticeSimd};
 
-// Non-associative
-let e4 = OInt::e4();
-let lhs = (e1 * e2) * e4;
-let rhs = e1 * (e2 * e4);
-println!("(e1*e2)*e4 = {} != {} = e1*(e2*e4)", lhs, rhs);
+let pts = vec![CInt::new(0,0), CInt::new(1,1)];
+let norms = LatticeSimd::z2_norm_squared_batch(&pts);
+let vecs = LatticeSimd::z2_to_lattice_batch(&pts);
+```
 
-// Moufang holds
-assert!(OInt::moufang_identity(e1, e2, e4));
+Performance & notes
+-------------------
+- SIMD adds large speedups for add/sub on AVX2-capable x86_64 hosts; multiplications remain scalar because algebraic multiplication is not generally SIMD-friendly.
+- Multiplication uses i64 intermediates and will panic on overflow when casting back to i32. If you require non-panicking arithmetic, consider switching to checked arithmetic and Result-based APIs.
+- div_rem uses floating-point rounding to compute quotient components; tests exercise typical cases. Be mindful of rounding ties when designing dependent algorithms.
 
-SIMD
+Development & testing
+---------------------
+- Build: cargo build -p entropy_hpc --release
+- Test (demo prints many checks): cargo test -p entropy_hpc --test demo -- --nocapture
+- Docs: cargo doc -p entropy_hpc --no-deps --open
+- Recommended dev tools: cargo fmt, cargo clippy, cargo-audit, cargo-geiger (unsafe analysis), cargo-llvm-cov or cargo-tarpaulin (coverage)
 
-rust
-use entropy_hpc::{CInt, simd_engine};
+Where to look
+-------------
+- Source: entropy_hpc/src/{types, simd, lattice}
+  - types: cint.rs, hint.rs, oint.rs, display.rs
+  - simd: simd_engine.rs, lattice_simd.rs, simd_lattice.rs
+  - lattice: z2.rs, d4.rs, e8.rs
+- Tests & demo: entropy_hpc/tests/demo.rs — comprehensive live demonstration and assertions
 
-let ca = [CInt::new(1,2), CInt::new(3,4), CInt::new(5,6), CInt::new(7,8)];
-let cb = [CInt::new(2,1), CInt::new(4,3), CInt::new(6,5), CInt::new(8,7)];
+Contributing
+------------
+- Run formatting and lints before PRs:
+  - cargo fmt --all
+  - cargo clippy --all-targets --all-features -- -D warnings
+- Add tests for new behavior and document any unsafe invariants inline with the unsafe block.
+- If you add unsafe code, comment invariants (why it is safe) and add tests that exercise edge cases.
 
-let result = simd_engine::cint_add_batch(&ca, &cb);
-println!("{:?}", result);  // [3+3i, 7+7i, 11+11i, 15+15i]
+---
 
-// Array operations (10k elements)
-let vec_a: Vec<CInt> = (0..10000).map(|i| CInt::new((i % 100) as i32, (i / 100) as i32)).collect();
-let vec_b: Vec<CInt> = (0..10000).map(|i| CInt::new((i / 50) as i32, (i % 50) as i32)).collect();
-let mut out = vec![CInt::zero(); 10000];
-
-simd_engine::cint_add_arrays(&vec_a, &vec_b, &mut out);  // ~30µs for 10k
-
-Performance Notes
-
-    CInt SIMD: ~30µs for 10k adds (4-element chunks with AVX2)
-
-    HInt SIMD: ~80µs for 10k adds (2-element chunks)
-
-    OInt SIMD: ~180µs for 10k adds (8D full vectorized)
-
-    Multiplication: Scalar fallback for all (complex formulas not SIMD-friendly)
-
-    AVX2 Auto-detection: Enabled at runtime; scalar fallback on older CPUs
-
-Mathematical Properties Guaranteed
-Property	CInt	HInt	OInt
-Commutative	✓	✗	✗
-Associative	✓	✓	✗
-Euclidean	✓	✓	✓
-GCD exists	✓	✓	✓
-Division algorithm	✓	✓	✓
-Half-integers	✗	✓	✓
-Moufang law	-	-	✓
-Alternative	-	-	✓
-Error Handling
-
-All operations return Result<T, Error> except where noted:
-
-    new() / from_halves() - May error on parity mismatch (halves)
-
-    Arithmetic - Panics on overflow (i64 intermediate)
-
-    Division/GCD - Errors on division by zero, non-divisibility
+This document reflects the crate's public API and behavior as implemented in the repository (files under entropy_hpc/src). If you want, I can produce a generated reference (extracting exact function/type signatures automatically) or open a PR with this updated API_DOC.md applied to the repo
 
