@@ -1,287 +1,120 @@
-# entropy_hpc: API Documentation
+# API Documentation — entropy
+
+This document describes the public API surface of the entropy crate and examples of how to use it. Replace types/function names below with the actual items from your codebase.
+
+Table of contents
+- Overview
+- Crate features
+- Public types
+- Functions / Methods
+- Errors
+- Examples
+- Notes on safety / thread-safety / performance
 
 ## Overview
+entropy exposes a small, focused API to compute information-theoretic measures and utilities for randomness analysis. The crate is split into:
+- library API (for embedding in other projects)
+- CLI binary (if present) for ad-hoc usage
 
-entropy_hpc is a high-performance Rust library for SIMD-accelerated Euclidean lattice algebra. It implements three increasingly sophisticated normed division algebras:
+## Crate features
+List available Cargo features and what they enable (example):
+- default: safe, portable implementation
+- simd: enable SIMD accelerated code paths
+- serde: enable serialization for public types
 
-- CInt (Gaussian Integers): ℤ[i] — 2D complex integers
-- HInt (Hurwitz Quaternions): Half-integer or full-integer quaternions — 4D hypercomplex
-- OInt (Integer Octonions): 8D non-associative algebra with Fano plane multiplication
+## Public types
 
-All types support Euclidean division, GCD computation, fractional arithmetic, and AVX2 SIMD acceleration.
-
----
-
-## Module: cint (Complex Integers ℤ[i])
-
-### Types
-
-#### CInt
-Represents a Gaussian integer: a + bi where a, b ∈ ℤ.
-
-Fields:
-- `a: i32` — Real part
-- `b: i32` — Imaginary part
-
-#### CIFraction
-Represents a fraction of Gaussian integers: numerator / denominator.
-
-Fields:
-- `num: CInt` — Numerator
-- `den: u64` — Denominator (always positive)
-
-#### CIntError
-Error type for CInt operations.
-
-Variants:
-- `Overflow` — Arithmetic overflow in multiplication
-- `DivisionByZero` — Attempted division by zero
-- `NotDivisible` — Exact division failed (non-zero remainder)
-- `NoInverse` — Element has no inverse
-
-### Constructors
-
+EntropyCalculator
+- Purpose: primary high-level API to compute entropy and related statistics.
+- Example:
 ```rust
-pub fn new(a: i32, b: i32) -> Self
-pub fn zero() -> Self
-pub fn one() -> Self
-pub fn i() -> Self
+use entropy::EntropyCalculator;
+
+let calc = EntropyCalculator::new();
+let e = calc.entropy(&[0u8, 1u8, 2u8]);
 ```
 
-Creates common constants and values.
+EntropyResult
+- A struct containing results such as:
+  - bits_per_byte: f64
+  - distribution: Vec<(u8, f64)>
+  - sample_size: usize
 
-### Properties
+If your crate exposes different types, list them here and document fields.
 
+## Functions / Methods
+
+EntropyCalculator::new() -> EntropyCalculator
+- Create a new calculator using default settings.
+
+EntropyCalculator::with_config(cfg: Config) -> EntropyCalculator
+- Create with custom settings (e.g., window size, normalization).
+
+EntropyCalculator::entropy(&self, data: &[u8]) -> f64
+- Compute Shannon entropy (bits/byte). Returns an f64.
+
+EntropyCalculator::entropy_by_window(&self, data: &[u8], window: usize) -> Vec<EntropyResult>
+- Compute sliding-window entropy. Useful for detecting local structure.
+
+Utility functions
+- fn shannon_distribution(data: &[u8]) -> HashMap<u8, usize>
+- fn normalized_entropy_from_counts(counts: &HashMap<u8, usize>, sample_size: usize) -> f64
+
+Document signatures exactly as in code and any panics/constraints.
+
+## Errors
+If functions return Result, list error types and when they occur:
+- Error::EmptyInput — returned when input length is zero
+- Error::InvalidWindow — returned when window size is 0 or > input length
+
+Show how to handle:
 ```rust
-pub fn is_zero(self) -> bool
-pub fn is_unit(self) -> bool
-pub fn norm_squared(self) -> u64
-pub fn conj(self) -> Self
-pub fn normalize(self) -> Self
-pub fn associates(self) -> [Self; 4]
+match calc.entropy_checked(data) {
+    Ok(e) => println!("{}", e),
+    Err(e) => eprintln!("error: {}", e),
+}
 ```
 
-- `is_unit`: checks units in ℤ[i]: ±1, ±i.
-- `norm_squared`: N(a+bi) = a² + b².
-- `associates`: returns `{z, -z, iz, -iz}`.
+## Examples
 
-### Arithmetic Operations
-
+1) Basic entropy
 ```rust
-impl Add for CInt { ... }
-impl Sub for CInt { ... }
-impl Mul for CInt { ... }
-impl Neg for CInt { ... }
+use entropy::EntropyCalculator;
+
+let calc = EntropyCalculator::default();
+let score = calc.entropy(b"hello world");
+println!("entropy: {:.3}", score);
 ```
 
-All standard operators with wrapping/panicking on overflow in multiplication.
-
-### Division & GCD
-
+2) Sliding window
 ```rust
-pub fn div_rem(self, d: Self) -> Result<(Self, Self), CIntError>
-pub fn div_exact(self, d: Self) -> Result<Self, CIntError>
-pub fn gcd(a: Self, b: Self) -> Self
-pub fn xgcd(a: Self, b: Self) -> (Self, Self, Self)
+let results = calc.entropy_by_window(b"some long data...", 1024);
+for r in results {
+    println!("offset: {}, entropy: {}", r.offset, r.bits_per_byte);
+}
 ```
 
-- `div_rem`: Euclidean division returning `(q, r)` with `self = q*d + r` and `N(r) < N(d)`.
-- `div_exact`: exact division or error.
-- `xgcd`: extended GCD returning `(g, x, y)` where `g = ax + by`.
-
-### Fractions
-
-```rust
-pub fn div_to_fraction(self, d: Self) -> Result<CIFraction, CIntError>
-pub fn inv_fraction(self) -> Result<CIFraction, CIntError>
-pub fn reduce_fraction(frac: CIFraction) -> CIFraction
-pub fn inv_unit(self) -> Result<Self, CIntError>
+3) CLI usage
+If a CLI exists, show common flags:
+```
+entropy-cli --input file.bin --window 4096 --format json
 ```
 
----
+## Notes on safety
+- Document any unsafe blocks and their invariants.
+- Describe thread-safety: Are types Send + Sync? Which functions can be called concurrently?
 
-## Module: hint (Hurwitz Quaternions)
+## Performance considerations
+- Complexity: O(n + alphabet) for single-pass entropy.
+- Memory: describe allocations and whether results reuse buffers.
 
-### Types
+## Testing recommendations
+- Provide typical test vectors and expected entropy values for deterministic verification.
+- Suggest using fuzzing for input-parsing functions.
 
-#### HInt
-Represents a Hurwitz quaternion: a + bi + cj + dk (half-integers or full integers).
+## Changelog & versioning
+- Indicate where to find release notes or CHANGELOG.md
 
-Fields (stored as 2× actual value to represent halves uniformly):
-- `a: i32`
-- `b: i32`
-- `c: i32`
-- `d: i32`
-
-#### HIFraction
-Fraction of Hurwitz quaternions.
-
-Fields:
-- `num: HInt`
-- `den: u64`
-
-#### HIntError
-Error type. Variants include `Overflow`, `DivisionByZero`, `NotDivisible`, `NoInverse`, and `InvalidHalfInteger` (mixed parity in `from_halves`).
-
-### Constructors
-
-```rust
-pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self
-pub fn from_halves(a: i32, b: i32, c: i32, d: i32) -> Result<Self, HIntError>
-pub fn zero() -> Self
-pub fn one() -> Self
-pub fn i() -> Self
-pub fn j() -> Self
-pub fn k() -> Self
-```
-
-`from_halves` requires all components to have the same parity (all odd for halves or all even for integers).
-
-### Properties & Algebra
-
-```rust
-pub fn is_zero(self) -> bool
-pub fn is_unit(self) -> bool
-pub fn norm_squared(self) -> u64
-pub fn conj(self) -> Self
-pub fn to_float_components(self) -> (f64, f64, f64, f64)
-pub fn normalize(self) -> Self
-pub fn associates(self) -> [HInt; 8]
-```
-
-Quaternion-specific helpers:
-
-```rust
-pub fn is_anticommutative_pair(a: Self, b: Self) -> bool
-pub fn is_associative_triple(a: Self, b: Self, c: Self) -> bool
-```
-
-Arithmetic and division mirror CInt but multiplication is non-commutative.
-
----
-
-## Module: oint (Integer Octonions)
-
-### Types
-
-#### OInt
-Represents an integer octonion: a + be1 + ce2 + de3 + ee4 + fe5 + ge6 + he7.
-
-Fields (scalar stored as 2× for half-integers support):
-- `a: i32`
-- `b, c, d, e, f, g, h: i32`
-
-#### OIFraction
-Fraction of octonions.
-
-#### OIntError
-Same variants as CInt + `InvalidHalfInteger`.
-
-### Constructors & Basis
-
-```rust
-pub fn new(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32) -> Self
-pub fn from_halves(a: i32, ..., h: i32) -> Result<Self, OIntError>
-pub fn zero() -> Self
-pub fn one() -> Self
-pub fn e1() -> Self
-pub fn e2() -> Self
-pub fn e3() -> Self
-pub fn e4() -> Self
-pub fn e5() -> Self
-pub fn e6() -> Self
-pub fn e7() -> Self
-```
-
-### Properties
-
-```rust
-pub fn is_zero(self) -> bool
-pub fn is_unit(self) -> bool
-pub fn norm_squared(self) -> u64
-pub fn conj(self) -> Self
-pub fn to_float_components(self) -> (f64, f64, f64, f64, f64, f64, f64, f64)
-pub fn normalize(self) -> Self
-pub fn associates(self) -> [OInt; 8]
-```
-
-Octonion-specific algebra helpers include checks for non-commutativity, non-associativity, Moufang and alternative identities.
-
----
-
-## Module: simd → simd_engine
-
-SIMD-accelerated batch operations with AVX2 when available, scalar fallback otherwise.
-
-### CInt SIMD (4 elements at a time)
-
-```rust
-pub fn cint_add_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-pub fn cint_sub_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-pub fn cint_mul_batch(a: &[CInt; 4], b: &[CInt; 4]) -> [CInt; 4]
-```
-
-Array versions process in 4-element chunks with a tail scalar.
-
-### HInt SIMD (2 elements at a time)
-
-```rust
-pub fn hint_add_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-pub fn hint_sub_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-pub fn hint_mul_batch(a: &[HInt; 2], b: &[HInt; 2]) -> [HInt; 2]
-```
-
-### OInt SIMD (1 element, 8D vectorized)
-
-```rust
-pub fn oint_add_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-pub fn oint_sub_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-pub fn oint_mul_batch(a: &[OInt; 1], b: &[OInt; 1]) -> [OInt; 1]
-```
-
----
-
-## Module: display
-
-Formatting and display implementations for types and fractions (`Display`, `Debug`).
-
----
-
-## Example Usage
-
-(Short examples showcasing CInt, HInt, OInt and SIMD usage are included in the library — see the repository examples.)
-
----
-
-## Performance Notes
-
-- CInt SIMD: ~30µs for 10k adds (4-element chunks with AVX2)
-- HInt SIMD: ~80µs for 10k adds (2-element chunks)
-- OInt SIMD: ~180µs for 10k adds (8D full vectorized)
-- Multiplication: scalar fallback for all (complex formulas not SIMD-friendly)
-- AVX2 Auto-detection: enabled at runtime; scalar fallback on older CPUs
-
----
-
-## Mathematical Properties Guaranteed
-
-| Property           | CInt | HInt | OInt |
-|--------------------|:----:|:----:|:----:|
-| Commutative        | ✓    | ✗    | ✗    |
-| Associative        | ✓    | ✓    | ✗    |
-| Euclidean          | ✓    | ✓    | ✓    |
-| GCD exists         | ✓    | ✓    | ✓    |
-| Division algorithm | ✓    | ✓    | ✓    |
-| Half-integers      | ✗    | ✓    | ✓    |
-| Moufang law        | -    | -    | ✓    |
-| Alternative        | -    | -    | ✓    |
-
----
-
-## Error Handling
-
-All operations return `Result<T, Error>` except where noted:
-
-- `new()` / `from_halves()` — May error on parity mismatch (halves)
-- Arithmetic — Panics on overflow (i64 intermediate)
-- Division/GCD — Errors on division by zero, non-divisibility
+## Contact / support
+- Open issue: https://github.com/Gutkaq/entropy/issues
+- Author: Gutkaq
