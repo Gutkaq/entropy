@@ -1,90 +1,106 @@
-# entropy_hpc
+# entropy
 
-Welcome to entropy_hpc — where algebra meets SIMD, and chaos gets a speed boost.
+entropy is a Rust crate / application for [brief description — replace with actual purpose]. It provides [core features — e.g., entropy calculation, random data utilities, CLI and library APIs]. Designed for performance and safety with idiomatic Rust.
 
-entropy_hpc is a high-performance Rust library for Euclidean lattice algebra: Gaussian integers, Hurwitz quaternions, and integer octonions, all tuned to hum when AVX2 is available. Use it when you want exact arithmetic in funky dimensions, but also want it to run absurdly fast on modern CPUs.
+If you updated the code recently, please replace the short description above with a one-line summary of what the project now does.
 
-## Quick Highlights (TL;DR)
-- SIMD-accelerated batch operations (AVX2 when available, scalar fallback otherwise)
-- Euclidean division and GCD for CInt, HInt and OInt
-- Fraction support and canonical normalization (half-integers handled cleanly)
-- Readable Display / Debug implementations and handy examples
+## Features
+- Fast and memory-conscious implementations
+- Library + CLI (if applicable)
+- Thorough documentation and examples
+- CI checks for formatting, linting, testing, and security
 
-## Install
+## Status
+- Primary language: Rust
+- Last updated: 2025-10-31
+- Repository: https://github.com/Gutkaq/entropy
 
+## Requirements
+- Rust toolchain (stable) — recommended minimum: 1.70+
+- cargo (comes with rustup)
+- Optional tools for development:
+  - cargo-clippy
+  - cargo-fmt
+  - cargo-audit
+  - cargo-geiger (unsafe analysis)
+  - cargo-tarpaulin or cargo-llvm-cov for coverage
+
+## Quick start
+
+1. Clone the repo:
+   git clone https://github.com/Gutkaq/entropy.git
+   cd entropy
+
+2. Build:
+   cargo build --release
+
+3. Run tests:
+   cargo test --all
+
+4. Format & lint:
+   cargo fmt --all
+   cargo clippy --all-targets --all-features -- -D warnings
+
+## Installation (library)
 Add to your Cargo.toml:
-
 ```toml
 [dependencies]
-entropy_hpc = { git = "https://github.com/Gutkaq/entropy" }
+entropy = { git = "https://github.com/Gutkaq/entropy", branch = "main" }
+```
+Or use a published crate version when available:
+```toml
+entropy = "X.Y"
 ```
 
-Or if a published crate exists:
+## Usage (library)
+Example — replace with actual public API:
+```rust
+use entropy::EntropyCalculator;
 
+let calc = EntropyCalculator::new();
+let data = b"example data";
+let score = calc.entropy(data);
+println!("entropy: {}", score);
+```
+
+## Usage (CLI)
+If the project has a CLI binary (replace `entropy-cli` with actual name):
+Build and run:
 ```bash
-cargo add entropy_hpc
+cargo run --bin entropy-cli -- --input data.bin --mode score
+```
+Example output:
+```
+Entropy: 4.23 bits/byte
 ```
 
-## Quick Example
+## Configuration
+Document any config files, environment variables or feature flags here. Example:
+- ENTROPY_LOG_LEVEL=info — logging verbosity
+- features: "simd", "serde" — optional Cargo features
 
-Caveat: these tiny snippets are for demonstration. See the library examples and API_DOC.md for fuller usage.
+## Testing & CI
+We recommend adding a GitHub Actions workflow to run:
+- cargo fmt -- --check
+- cargo clippy -- -D warnings
+- cargo test --all
+- cargo audit
 
-CInt (Gaussian integers)
-```rust
-use entropy_hpc::CInt;
+Example workflow file: .github/workflows/ci.yml (not included here)
 
-let a = CInt::new(3, 4); // 3 + 4i
-let b = CInt::new(1, 2); // 1 + 2i
-
-println!("{} + {} = {}", a, b, a + b); // 4 + 6i
-let (q, r) = a.div_rem(b).unwrap();
-println!("div: q={}, r={}", q, r);
-```
-
-HInt (Hurwitz quaternions)
-```rust
-use entropy_hpc::HInt;
-
-let i = HInt::i();
-let j = HInt::j();
-println!("i*j = {}", i * j); // k
-```
-
-SIMD example (CInt add batch)
-```rust
-use entropy_hpc::{CInt, simd_engine};
-
-let ca = [CInt::new(1,2), CInt::new(3,4), CInt::new(5,6), CInt::new(7,8)];
-let cb = [CInt::new(2,1), CInt::new(4,3), CInt::new(6,5), CInt::new(8,7)];
-let result = simd_engine::cint_add_batch(&ca, &cb);
-println!("{:?}", result); // [3+3i, 7+7i, 11+11i, 15+15i]
-```
-
-## Documentation
-
-Full API and details are in API_DOC.md:
-- ./API_DOC.md
-
-## Features & Performance Notes
-
-- CInt SIMD: ~30µs for 10k adds (4-element chunks with AVX2)
-- HInt SIMD: ~80µs for 10k adds (2-element chunks)
-- OInt SIMD: ~180µs for 10k adds (8D vectorized)
-- Multiplication uses scalar formulas (complex to vectorize); addition and subtraction are vectorized where possible.
+## Security
+- Run cargo audit in CI to catch vulnerable dependencies.
+- Use cargo-geiger to monitor unsafe code usage.
+- Do not commit secrets. If secrets were accidentally committed, remove them and rotate credentials.
 
 ## Contributing
-
-Contributions, bug reports, and performance ideas are welcome. If you want to help:
-1. Open an issue describing the idea or bug.
-2. Fork, branch, and open a PR with focused changes and tests.
-3. Keep commits small and topic-focused.
-
-If you'd like me to add a CONTRIBUTING.md or CI badges, say the word and I’ll draft them.
+- Open issues for bugs or feature requests.
+- Follow the coding style: run cargo fmt and clippy locally.
+- Add tests for new features and ensure CI passes.
 
 ## License
+Add your chosen license here (e.g., MIT, Apache-2.0). If you want, I can generate a LICENSE file.
 
-MIT — see the LICENSE file.
-
-## Final note (the witty bit)
-
-If numbers had a gym membership, entropy_hpc would be the trainer yelling "more reps, less rounding errors!" — fast, exact, and oddly satisfying.
+## Contact
+Repository: https://github.com/Gutkaq/entropy
+Author: Gutkaq
