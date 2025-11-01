@@ -1,120 +1,122 @@
-# API Documentation — entropy
+```markdown
+# entropy_hpc — API Documentation
 
-This document describes the public API surface of the entropy crate and examples of how to use it. Replace types/function names below with the actual items from your codebase.
+Purpose
+--------
+entropy_hpc is a high-performance Rust library exposing algebraic integer types and SIMD-accelerated batch operations for vectorized numeric work on small fixed-dimension algebras:
+- CInt: Gaussian integers ℤ[i] (2D)
+- HInt: Hurwitz quaternions (4D; supports half-integers)
+- OInt: Integer octonions (8D; non-associative)
 
-Table of contents
-- Overview
-- Crate features
-- Public types
-- Functions / Methods
-- Errors
-- Examples
-- Notes on safety / thread-safety / performance
+The crate provides arithmetic, Euclidean division, GCD, fraction support, human-friendly display, and AVX2-accelerated batch operations with scalar fallbacks.
 
-## Overview
-entropy exposes a small, focused API to compute information-theoretic measures and utilities for randomness analysis. The crate is split into:
-- library API (for embedding in other projects)
-- CLI binary (if present) for ad-hoc usage
+Quick reference
+---------------
+- Crate name: entropy_hpc
+- Version: 0.2.0
+- Path: entropy_hpc/src
+- Features: AVX2 accelerated SIMD engine (runtime-detected), scalar fallback
 
-## Crate features
-List available Cargo features and what they enable (example):
-- default: safe, portable implementation
-- simd: enable SIMD accelerated code paths
-- serde: enable serialization for public types
+Public types & primary methods
+-----------------------------
 
-## Public types
+CInt (Gaussian integers)
+- struct CInt { a: i32, b: i32 }
+- Constructors:
+  - CInt::new(a: i32, b: i32) -> CInt
+  - CInt::zero(), CInt::one(), CInt::i()
+- Core operations: Add, Sub, Mul, Neg
+- Utilities:
+  - is_zero(), is_unit(), conj(), norm_squared(), normalize()
+  - div_rem(self, d: CInt) -> Result<(CInt, CInt), CIntError>
+  - div_exact(self, d: CInt) -> Result<CInt, CIntError>
+  - div_to_fraction(self, d: CInt) -> Result<CIFraction, CIntError>
+  - gcd(a: CInt, b: CInt) -> CInt
+  - xgcd(a: CInt, b: CInt) -> (g: CInt, x: CInt, y: CInt)
+- Error: CIntError { Overflow, DivisionByZero, NotDivisible, NoInverse }
+- Fraction: CIFraction { num: CInt, den: u64 }
 
-EntropyCalculator
-- Purpose: primary high-level API to compute entropy and related statistics.
-- Example:
-```rust
-use entropy::EntropyCalculator;
+HInt (Hurwitz quaternions)
+- struct HInt { a: i32, b: i32, c: i32, d: i32 } (stored as 2×actual to support half-integers)
+- Constructors:
+  - HInt::new(a,b,c,d) — from integers
+  - HInt::from_halves(a,b,c,d) -> Result<HInt, HIntError> — accepts parity-homogeneous components
+  - zero(), one(), i(), j(), k()
+- Core operations: Add, Sub, Mul, Neg
+- Utilities:
+  - is_zero(), is_unit(), conj(), norm_squared(), normalize()
+  - div_rem(self, d: HInt) -> Result<(HInt, HInt), HIntError>
+  - div_exact(self, d: HInt) -> Result<HInt, HIntError>
+  - div_to_fraction(self, den: HInt) -> Result<HIFraction, HIntError>
+  - gcd(a: HInt, b: HInt) -> HInt
+- Extra checks:
+  - from_halves enforces parity (no mixed half/integer components)
+  - is_anticommutative_pair, is_associative_triple
+- Error: HIntError { Overflow, DivisionByZero, NotDivisible, NoInverse, InvalidHalfInteger }
+- Fraction: HIFraction { num: HInt, den: u64 }
 
-let calc = EntropyCalculator::new();
-let e = calc.entropy(&[0u8, 1u8, 2u8]);
-```
+OInt (Integer octonions)
+- struct OInt { a,b,c,d,e,f,g,h: i32 } (stored as 2×actual)
+- Constructors:
+  - OInt::new(a,b,c,d,e,f,g,h)
+  - OInt::from_halves(...) -> Result<OInt, OIntError>
+  - zero(), one(), e1()..e7()
+- Core operations: Add, Sub, Mul, Neg
+- Utilities:
+  - is_zero(), is_unit(), conj(), norm_squared(), normalize()
+  - div_rem(self, d: OInt) -> Result<(OInt, OInt), OIntError>
+  - div_exact(self, d: OInt) -> Result<OInt, OIntError>
+  - div_to_fraction(self, den: OInt) -> Result<OIFraction, OIntError>
+  - gcd(a: OInt, b: OInt) -> OInt
+- Algebra-specific methods:
+  - is_non_commutative_pair, is_non_associative_triple, alternative_identity, moufang_identity
+- Error: OIntError { Overflow, DivisionByZero, NotDivisible, NoInverse, InvalidHalfInteger }
+- Fraction: OIFraction { num: OInt, den: u64 }
 
-EntropyResult
-- A struct containing results such as:
-  - bits_per_byte: f64
-  - distribution: Vec<(u8, f64)>
-  - sample_size: usize
+Display & Debug
+---------------
+- Human-friendly Display implementations exist for CInt, CIFraction, HInt, HIFraction, OInt, OIFraction.
+- Debug implementations delegate to Display for readable output in tests.
 
-If your crate exposes different types, list them here and document fields.
+SIMD engine (simd::simd_engine)
+------------------------------
+- Runtime checks for AVX2 on x86_64; scalar fallback otherwise.
+- CInt SIMD:
+  - cint_add_batch(a: &[CInt;4], b: &[CInt;4]) -> [CInt;4]
+  - cint_sub_batch(...)
+  - cint_mul_batch(...) // scalar multiplication fallback
+  - cint_add_arrays(a: &[CInt], b: &[CInt], out: &mut [CInt]) // chunked 4-element + tail
+- HInt SIMD:
+  - hint_add_batch(a: &[HInt;2], b: &[HInt;2]) -> [HInt;2]
+  - hint_sub_batch(...)
+  - hint_mul_batch(...)
+  - hint_*_arrays(...) // chunked 2-element + tail
+- OInt SIMD:
+  - oint_add_batch(a: &[OInt;1], b: &[OInt;1]) -> [OInt;1] // full 8×i32 vectorized add
+  - oint_sub_batch(...)
+  - oint_mul_batch(...) // scalar fallback
+  - oint_*_arrays(...) // per-element SIMD add/sub
 
-## Functions / Methods
+Guidelines & notes
+------------------
+- Safety: no unsafe shown in public types; SIMD internal helpers use standard arch intrinsics gated by cfg and runtime checks. When adding unsafe code, document invariants.
+- Panics: some arithmetic operations panic on overflow in i64->i32 conversion; consider returning Results or using checked arithmetics if you require no panics.
+- Errors: division operations return typed error enums; check for DivisionByZero and NotDivisible.
+- Tests: tests/demo.rs demonstrates API usage and is a useful reference for expected behavior and semantics.
+- Performance: AVX2 adds major speedups for vectorized add/sub; multiplications are scalar because algebraic multiplication formulas are not generally SIMD-friendly.
 
-EntropyCalculator::new() -> EntropyCalculator
-- Create a new calculator using default settings.
+Examples
+--------
+See `entropy_hpc/tests/demo.rs` for comprehensive usage examples and assertions.
 
-EntropyCalculator::with_config(cfg: Config) -> EntropyCalculator
-- Create with custom settings (e.g., window size, normalization).
+Development
+-----------
+- Build: cargo build -p entropy_hpc --release
+- Test: cargo test -p entropy_hpc -- --nocapture
+- Document: cargo doc -p entropy_hpc --no-deps --open
 
-EntropyCalculator::entropy(&self, data: &[u8]) -> f64
-- Compute Shannon entropy (bits/byte). Returns an f64.
-
-EntropyCalculator::entropy_by_window(&self, data: &[u8], window: usize) -> Vec<EntropyResult>
-- Compute sliding-window entropy. Useful for detecting local structure.
-
-Utility functions
-- fn shannon_distribution(data: &[u8]) -> HashMap<u8, usize>
-- fn normalized_entropy_from_counts(counts: &HashMap<u8, usize>, sample_size: usize) -> f64
-
-Document signatures exactly as in code and any panics/constraints.
-
-## Errors
-If functions return Result, list error types and when they occur:
-- Error::EmptyInput — returned when input length is zero
-- Error::InvalidWindow — returned when window size is 0 or > input length
-
-Show how to handle:
-```rust
-match calc.entropy_checked(data) {
-    Ok(e) => println!("{}", e),
-    Err(e) => eprintln!("error: {}", e),
-}
-```
-
-## Examples
-
-1) Basic entropy
-```rust
-use entropy::EntropyCalculator;
-
-let calc = EntropyCalculator::default();
-let score = calc.entropy(b"hello world");
-println!("entropy: {:.3}", score);
-```
-
-2) Sliding window
-```rust
-let results = calc.entropy_by_window(b"some long data...", 1024);
-for r in results {
-    println!("offset: {}, entropy: {}", r.offset, r.bits_per_byte);
-}
-```
-
-3) CLI usage
-If a CLI exists, show common flags:
-```
-entropy-cli --input file.bin --window 4096 --format json
-```
-
-## Notes on safety
-- Document any unsafe blocks and their invariants.
-- Describe thread-safety: Are types Send + Sync? Which functions can be called concurrently?
-
-## Performance considerations
-- Complexity: O(n + alphabet) for single-pass entropy.
-- Memory: describe allocations and whether results reuse buffers.
-
-## Testing recommendations
-- Provide typical test vectors and expected entropy values for deterministic verification.
-- Suggest using fuzzing for input-parsing functions.
-
-## Changelog & versioning
-- Indicate where to find release notes or CHANGELOG.md
-
-## Contact / support
-- Open issue: https://github.com/Gutkaq/entropy/issues
+Contact
+-------
+- Issues: https://github.com/Gutkaq/entropy/issues
 - Author: Gutkaq
+```
